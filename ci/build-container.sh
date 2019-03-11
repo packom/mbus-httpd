@@ -76,7 +76,7 @@ mkdir -p $CIDIR
 echo "Getting API: ./api/openapi.yaml"
 cp ./api/openapi.yaml $CIDIR/api.yaml
 
-echo "docker build -t $TAG --build-arg DIR=$DIR --build-arg TYPE=$TYPE $NO_CACHE ./ci"
-docker build -t $TAG --build-arg DIR=$DIR --build-arg TYPE=$TYPE $NO_CACHE ./ci
+echo "docker build -t $TAG --build-arg DIR=$DIR --build-arg TYPE=$TYPE $NO_CACHE --build-arg TARGET=$TARGET ./ci"
+docker build -t $TAG --build-arg DIR=$DIR --build-arg TYPE=$TYPE $NO_CACHE --build-arg TARGET=$TARGET ./ci
 
 rm -fr $CIDIR

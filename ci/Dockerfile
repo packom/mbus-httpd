@@ -9,16 +9,18 @@ WORKDIR /home/build/builds
 RUN git clone https://github.com/packom/mbus-httpd
 WORKDIR /home/build/builds/mbus-httpd
 ARG TYPE
-RUN cargo build --$TYPE
+ARG TARGET
+RUN cargo build --$TYPE --target=$TARGET
 
 FROM scratch
 WORKDIR /
 COPY --from=libmbus /home/build/builds/libmbus/mbus/.libs/libmbus.so .
 COPY --from=libmbus /home/build/builds/libmbus/bin/mbus-serial-request-data .
 COPY --from=libmbus /home/build/builds/libmbus/bin/mbus-serial-scan .
-COPY --from=mbus-httpd /home/build/builds/mbus-httpd/target/release/mbus-httpd .
+ARG TARGET
+COPY --from=mbus-httpd /home/build/builds/mbus-httpd/target/$TARGET/release/mbus-httpd .
 ARG DIR
 ADD $DIR/api.yaml /static/
 VOLUME ["/ssl"]
 EXPOSE 8080
-CMD ["./mbus-httpd"]
+CMD ["/mbus-httpd"]
