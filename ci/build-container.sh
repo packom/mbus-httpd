@@ -59,6 +59,7 @@ if [[ ! $BIN ]];
 fi
 
 DIR=tmp/$BIN-$TYPE-$ARCH-$VERSION
+CIDIR=ci/$DIR
 TAG=$BIN-$TYPE-$ARCH:$VERSION
 
 echo "Creating container for"
@@ -69,13 +70,13 @@ echo "  Type:      $TYPE"
 echo "  Version:   $VERSION"
 echo "  Tag:       $TAG"
 
-rm -fr $DIR
-mkdir -p $DIR
+rm -fr $DIDIR
+mkdir -p $CIDIR
 
 echo "Getting API: ./api/openapi.yaml"
-cp ./api/openapi.yaml $DIR/api.yaml
+cp ./api/openapi.yaml $CIDIR/api.yaml
 
 echo "docker build -t $TAG --build-arg DIR=$DIR --build-arg TYPE=$TYPE $NO_CACHE ./ci"
 docker build -t $TAG --build-arg DIR=$DIR --build-arg TYPE=$TYPE $NO_CACHE ./ci
 
-rm -fr $DIR
+rm -fr $CIDIR

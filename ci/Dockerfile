@@ -3,13 +3,12 @@ WORKDIR /home/build/builds
 RUN git clone https://github.com/rscada/libmbus
 WORKDIR /home/build/builds/libmbus
 RUN ./build.sh
-RUN ls -ltr /home/build/builds/libmbus/mbus/.libs/
 
-FROM piersfinlayson/build:0.2.4 as mbus-httpd
+FROM piersfinlayson/build:0.2.5 as mbus-httpd
 WORKDIR /home/build/builds
-ARG TYPE
 RUN git clone https://github.com/packom/mbus-httpd
 WORKDIR /home/build/builds/mbus-httpd
+ARG TYPE
 RUN cargo build --$TYPE
 
 FROM scratch
