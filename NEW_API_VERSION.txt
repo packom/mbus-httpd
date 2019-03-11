@@ -1,0 +1,17 @@
+To generate a new version of openapi_client run a command like this:
+  docker run --rm -v /builds/openapi:/local openapitools/openapi-generator-cli generate -i /local/openapi.yaml -g rust-server -o /local/openapi_client
+
+To take a new version of this openapi_client:
+- delete the models directory if present
+- replace across entire directory 3x models:: with models::
+- edit src/server/mod.rs:
+  - line 232 and 523 change , e) to , param_baudrate)
+  - line 346 add:
+                                                    let body = serde_json::to_string(&body).expect("impossible to fail to serialize");
+- edit srv/client/mod.rs, line 466:
+  - remove: 
+                                                 Ok(body.to_string())
+
+  - replace with:
+                                                 serde_json::from_str::<models::Hat>(body)
+                                                     .map_err(|e| e.into())
