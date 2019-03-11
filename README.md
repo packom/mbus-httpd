@@ -30,13 +30,18 @@ cd ~/mbus-httpd
 cargo run
 ```
 
-Some useful environment various to set:
+Some very useful environment various to set:
+
+```
+LIBMBUS_PATH=<limbus binary path e.g. ~/libmbus/bin>
+LD_LIBRARY_PATH<path libmbus.so is installed to e.g. /usr/local/lib>
+```
+
+You may also want:
 
 ```
 SERVER_IP=<IP to listen on>
 SERVER_PORT=<port to listen on>
-LIBMBUS_PATH=<limbus binary path e.g. ~/libmbus/bin>
-LD_LIBRARY_PATH<path libmbus.so is installed to e.g. /usr/local/lib>
 RUST_LOG=<log level, e.g. INFO>
 ```
 
