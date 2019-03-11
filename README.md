@@ -30,7 +30,7 @@ cd ~/mbus-httpd
 cargo run
 ```
 
-Some very useful environment various to set:
+As mbus-httpd is designed to run in a container, all configuration is done by environment variables.  You'll almost certainly want:
 
 ```
 LIBMBUS_PATH=<limbus binary path e.g. ~/libmbus/bin>
