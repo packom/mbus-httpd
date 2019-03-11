@@ -1,5 +1,5 @@
 # mbus-httpd
-An HTTP microservice exposing M-Bus Functionality
+An HTTP microservice exposing (wired) M-Bus functionality.
 
 ## Building
 
