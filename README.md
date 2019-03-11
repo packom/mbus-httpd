@@ -3,7 +3,7 @@ An HTTP microservice exposing (wired) M-Bus functionality.
 
 ## Building
 
-You'll need Rust installed.  Run:
+You'll need [Rust](https://www.rust-lang.org/tools/install) installed.  Once installed run:
 
 ```
 cd ~
