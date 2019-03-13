@@ -2,7 +2,9 @@
 
 An HTTP microservice exposing (wired) M-Bus functionality.
 
-If you need a Raspberry Pi M-Bus Master Hat, see [here](https://www.packom.net/m-bus-master-hat/).  Alternatively
+You'll need a serial - M-Bus device to connect your server to an M-Bus.
+
+If you want to use a Raspberry Pi and want an M-Bus Master Hat, see [here](https://www.packom.net/m-bus-master-hat/).  Alternatively
 
 * buy a USB M-Bus Master device from ebay or aliexpress
 * build your own using widely available [schematics](https://otb-iot.readthedocs.io/en/latest/mbus.html).
