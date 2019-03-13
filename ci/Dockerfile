@@ -36,7 +36,7 @@ RUN git clone https://github.com/packom/mbus-httpd
 WORKDIR /home/build/builds/mbus-httpd
 ARG TYPE
 ARG TARGET
-RUN cargo build --$TYPE --target=$TARGET
+RUN cargo build $TYPE --target=$TARGET
 
 FROM scratch
 WORKDIR /
