@@ -1,6 +1,6 @@
 # [mbus-httpd](https://github.com/packom/mbus-httpd)
 
-An HTTP microservice exposing (wired) M-Bus functionality.
+An HTTP microservice exposing (wired) M-Bus functionality, allowing you to scan an M-Bus and query M-Bus slaves.
 
 You'll need a serial - M-Bus device to connect your server to an M-Bus.
 
