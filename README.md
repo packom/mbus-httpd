@@ -16,7 +16,7 @@ The easiest way to run mbus-httpd is to use a pre-built container, using docker.
 * x86_64
 * ARMv6 & ARMv7 (which together cover all Raspberry Pi models).
 
-(For some reason that I'm investigating, the ARMv6 version is failing right now - so use a more powerful ARMv7 Pi - like the A or B.)
+(The ARMv6 version is failing right now - so don't use a Pi Zero - use a more powerful ARMv7 Pi, like the A or B.)
 
 If you need docker the easiest way to get it is to run:
 
