@@ -11,12 +11,12 @@ If you want to use a Raspberry Pi and want an M-Bus Master Hat, see [here](https
 
 ## Quickstart
 
-The easiest way to run mbus-httpd is to use a pre-built container, using docker.  A single docker manifest is available which supports:
+The easiest way to run mbus-httpd is to use a pre-built container, using docker.  An mbus-httpd docker manifest is available which supports:
 
 * x86_64
 * ARMv6 & ARMv7 (which together cover all Raspberry Pi models).
 
-(For some reason that I'm investigating, the ARMv6 version is failing right now - so use a more powerful Model A or B Pi.)
+(For some reason that I'm investigating, the ARMv6 version is failing right now - so use a more powerful ARMv7 Pi - like the A or B.)
 
 If you need docker the easiest way to get it is to run:
 
