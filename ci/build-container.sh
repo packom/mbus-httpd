@@ -2,17 +2,33 @@
 set -e
 
 function output_args {
-    echo "Usage: build-container.sh <arch> <release|debug> <--no-cache>"
+    echo "Usage: $0 <hub.docker.com repo_name> <arch> <release|debug> <--no-cache>"
     echo "  <arch> = x86_64|arm|armv7"
     exit 1
 }
 
-ARCH=$1
-if [[ ! $ARCH ]];
+REPO=$1
+if [[ ! $REPO ]];
+  then
+    output_args
+    echo "Missing arguments"
+elif [[ $REPO == "-h" ]]
+  then
+    output_args
+elif [[ $REPO == "-?" ]]
+  then
+    output_args
+elif [[ $REPO == "--help" ]]
   then
     output_args
 fi
-if [[ $ARCH == "x86_64" ]];
+
+ARCH=$2
+if [[ ! $ARCH ]];
+  then
+    output_args
+    echo "Missing arguments"
+elif [[ $ARCH == "x86_64" ]]
   then
     TARGET="x86_64-unknown-linux-musl"
     COMPILER_DIR="/opt/cross/x86_64/bin"
@@ -29,15 +45,16 @@ elif [[ $ARCH == "armv7" ]]
     GCC="$COMPILER_DIR/arm-linux-musleabihf-gcc"
 else
   output_args
+  echo "Invalid argument"
 fi
 AR="$GCC-ar"
 
-TYPE=$2
+TYPE=$3
 if [[ ! $TYPE ]];
   then
     output_args
-fi
-if [[ $TYPE == "release" ]];
+    echo "Missing argument"
+elif [[ $TYPE == "release" ]]
   then
     TYPE="release"
     BUILD_TYPE="--release"
@@ -47,9 +64,10 @@ elif [[ $TYPE == "debug" ]]
     BUILD_TYPE=""
 else
   output_args
+  echo "Invalid argument"
 fi
 
-NO_CACHE=$3
+NO_CACHE=$4
 
 VERSION="$(awk '/^version = /{print $3}' Cargo.toml | sed 's/"//g' | sed 's/\r$//')"
 if [[ ! $VERSION ]];
@@ -67,7 +85,7 @@ fi
 
 DIR=tmp/$BIN-$TYPE-$ARCH-$VERSION
 CIDIR=ci/$DIR
-TAG=packom/$BIN-$TYPE-$ARCH:$VERSION
+TAG=$REPO/$BIN-$TYPE-$ARCH:$VERSION
 
 echo "Creating container for"
 echo "  Binary:    $BIN"
@@ -78,6 +96,7 @@ echo "  Version:   $VERSION"
 echo "  Tag:       $TAG"
 echo "  gcc:       $GCC"
 echo "  ar:        $AR"
+echo "  Repo:      $REPO"
 
 rm -fr $DIDIR
 mkdir -p $CIDIR
@@ -96,3 +115,7 @@ docker build -t $TAG \
   ./ci
 
 rm -fr $CIDIR
+
+echo "Pushing image $TAG"
+
+docker push $TAG

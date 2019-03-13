@@ -12,9 +12,10 @@ RUN /usr/bin/automake --add-missing --copy
 RUN /usr/bin/autoconf
 RUN ./configure
 # Don't use the makefile, as doesn't handle cross compilation properly
-# and/or haven't figured out how to do it.
+# and/or I haven't figured out how to do it.
 # Statically linking as I can't figure out how to dynamically link with
-# libmbus.so but statically link with libc.a.
+# libmbus.so but statically link with libc.a.  The binaries are small so
+# it's not a big deal.
 RUN mkdir -p output
 ARG GCC
 ARG AR
@@ -28,7 +29,6 @@ RUN $COMPILE bin/mbus-serial-scan.c -o output/mbus-serial-scan.o
 RUN $COMPILE bin/mbus-serial-request-data.c -o output/mbus-serial-request-data.o
 RUN $GCC -static output/mbus-serial-scan.o -o output/mbus-serial-scan -Loutput -lc -lmbus
 RUN $GCC -static output/mbus-serial-request-data.o -o output/mbus-serial-request-data -Loutput -lc -lmbus
-
 
 FROM piersfinlayson/build:0.2.5 as mbus-httpd
 WORKDIR /home/build/builds
