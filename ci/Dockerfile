@@ -30,7 +30,7 @@ RUN $COMPILE bin/mbus-serial-request-data.c -o output/mbus-serial-request-data.o
 RUN $GCC -static output/mbus-serial-scan.o -o output/mbus-serial-scan -Loutput -lc -lmbus
 RUN $GCC -static output/mbus-serial-request-data.o -o output/mbus-serial-request-data -Loutput -lc -lmbus
 
-FROM piersfinlayson/build:0.2.5 as mbus-httpd
+FROM piersfinlayson/build:0.2.6 as mbus-httpd
 WORKDIR /home/build/builds
 RUN git clone https://github.com/packom/mbus-httpd
 WORKDIR /home/build/builds/mbus-httpd
