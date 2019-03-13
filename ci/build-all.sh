@@ -90,7 +90,7 @@ docker manifest inspect $GEN_TAG_V
 docker manifest push --purge $GEN_TAG_V
 docker pull $GEN_TAG_V
 
-docker manifest create $GEN_TAG_L $X86_64_TAG $ARM_TAG $ARM_TAG
+docker manifest create $GEN_TAG_L $X86_64_TAG $ARM_TAG $ARMV7_TAG
 docker manifest annotate --arch amd64 --os linux $GEN_TAG_L $X86_64_TAG
 docker manifest annotate --arch arm --os linux --variant armv6l $GEN_TAG_L $ARM_TAG
 docker manifest annotate --arch arm --os linux --variant armv6l $GEN_TAG_L $ARMV7_TAG
