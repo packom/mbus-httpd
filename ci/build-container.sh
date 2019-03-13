@@ -104,10 +104,11 @@ mkdir -p $CIDIR
 echo "Getting API: ./api/openapi.yaml"
 cp ./api/openapi.yaml $CIDIR/api.yaml
 
-echo "docker build -t $TAG --build-arg DIR=$DIR --build-arg TYPE=$BUILD_TYPE $NO_CACHE --build-arg TARGET=$TARGET ./ci"
+echo "docker build -t $TAG --build-arg DIR=$DIR --build-arg TYPE=$BUILD_TYPE --build-arg COPY_TYPE=$TYPE $NO_CACHE --build-arg TARGET=$TARGET ./ci"
 docker build -t $TAG \
   --build-arg DIR=$DIR \
   --build-arg TYPE=$BUILD_TYPE \
+  --build-arg COPY_TYPE=$TYPE \
   --build-arg TARGET=$TARGET \
   --build-arg GCC=$GCC \
   --build-arg AR=$AR \

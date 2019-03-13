@@ -43,7 +43,8 @@ WORKDIR /
 COPY --from=libmbus /home/build/builds/libmbus/output/mbus-serial-scan .
 COPY --from=libmbus /home/build/builds/libmbus/output/mbus-serial-request-data .
 ARG TARGET
-COPY --from=mbus-httpd /home/build/builds/mbus-httpd/target/$TARGET/release/mbus-httpd .
+ARG COPY_TYPE
+COPY --from=mbus-httpd /home/build/builds/mbus-httpd/target/$TARGET/$COPY_TYPE/mbus-httpd .
 ARG DIR
 ADD $DIR/api.yaml /static/
 ENV LIBMBUS_PATH=/
