@@ -55,12 +55,12 @@ echo "Log into hub.docker.com as $REPO"
 docker login -u $REPO
 
 # Build containers
-#echo "$DIR/build-container.sh $REPO x86_64 $TYPE $NO_CACHE"
-#$DIR/build-container.sh $REPO x86_64 $TYPE $NO_CACHE
-#echo "$DIR/build-container.sh $REPO arm $TYPE $NO_CACHE"
-#$DIR/build-container.sh $REPO arm $TYPE $NO_CACHE
-#echo "$DIR/build-container.sh $REPO armv7 $TYPE $NO_CACHE"
-#$DIR/build-container.sh $REPO armv7 $TYPE $NO_CACHE
+echo "$DIR/build-container.sh $REPO x86_64 $TYPE $NO_CACHE"
+$DIR/build-container.sh $REPO x86_64 $TYPE $NO_CACHE
+echo "$DIR/build-container.sh $REPO arm $TYPE $NO_CACHE"
+$DIR/build-container.sh $REPO arm $TYPE $NO_CACHE
+echo "$DIR/build-container.sh $REPO armv7 $TYPE $NO_CACHE"
+$DIR/build-container.sh $REPO armv7 $TYPE $NO_CACHE
 
 # Create manifests
 VERSION="$(awk '/^version = /{print $3}' Cargo.toml | sed 's/"//g' | sed 's/\r$//')"
