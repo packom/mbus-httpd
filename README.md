@@ -81,7 +81,7 @@ You should be a response like:
 }
 ```
 
-You need to power on the M-Bus if using an M-Bus Master hat using:
+You need to power on the M-Bus if using an M-Bus Master Hat using:
 
 ```
 curl -v -X POST http://localhost:8080/mbus/hat/on
@@ -163,7 +163,9 @@ env RUST_LOG=INFO \
 cargo run
 ```
 
-To view logs, make sure RUST_LOG is set to INFO or DEBUG (see above), and run:
+### Debugging
+
+To view logs, make sure RUST_LOG is set to INFO or DEBUG (see above).  If running in a shell the logs will be output to stdout.  If running within docker you can view the logs using:
 
 ```
 docker logs -f mbus-httpd
