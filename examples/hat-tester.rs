@@ -212,6 +212,9 @@ fn main() {
         .arg(Arg::with_name("scan")
             .long("scan")
             .help("Whether to scan the M-Bus"))
+        .arg(Arg::with_name("hat")
+            .long("hat")
+            .help("Whether to test Hat specific functions"))
         .get_matches();
 
     let mut core = reactor::Core::new().unwrap();
@@ -234,62 +237,77 @@ fn main() {
     let baudrate: Baudrate = matches.value_of("baudrate").unwrap().parse().expect("Invalid valid for baudrate");
     let address = Address::from(matches.value_of("address").unwrap().parse::<i32>().expect("Invalid valid for baudrate"));
     let scan_b = matches.is_present("scan");
+    let hat_b = matches.is_present("hat");
 
     // Run tests
-    println!("==> Test can get hat details when hat is off and on");
-    let sleep_time = time::Duration::from_millis(1000);
-    hat_off(true, true, &mut core, &mut client);
-    sleep(sleep_time);
-    get_hat(true, true, &mut core, &mut client);
-    sleep(sleep_time);
-    hat_on(true, true, &mut core, &mut client);
-    sleep(sleep_time);
-    get_hat(true, true, &mut core, &mut client);
-    sleep(sleep_time);
-    println!("==> Success");
+    if hat_b {
+        println!("==> Test can get hat details when hat is off and on");
+        let sleep_time = time::Duration::from_millis(1000);
+        hat_off(true, true, &mut core, &mut client);
+        sleep(sleep_time);
+        get_hat(true, true, &mut core, &mut client);
+        sleep(sleep_time);
+        hat_on(true, true, &mut core, &mut client);
+        sleep(sleep_time);
+        get_hat(true, true, &mut core, &mut client);
+        sleep(sleep_time);
+        println!("==> Success");
 
-    println!("==> Test fast hat switching");
-    let sleep_time = time::Duration::from_millis(10);
-    for i in 1..100 {
+        println!("==> Test fast hat switching");
+        let sleep_time = time::Duration::from_millis(10);
+        for i in 1..100 {
+            hat_off(false, true, &mut core, &mut client);
+            sleep(sleep_time);
+            hat_on(false, true, &mut core, &mut client);
+            sleep(sleep_time);
+        }
         hat_off(false, true, &mut core, &mut client);
         sleep(sleep_time);
-        hat_on(false, true, &mut core, &mut client);
-        sleep(sleep_time);
+        println!("==> Success");
     }
-    hat_off(false, true, &mut core, &mut client);
-    sleep(sleep_time);
-    println!("==> Success");
 
     if scan_b {
         println!("==> Scan bus");
         let sleep_time = time::Duration::from_millis(1000);
-        hat_on(false, true, &mut core, &mut client);
-        sleep(sleep_time);
+        if hat_b {
+            hat_on(false, true, &mut core, &mut client);
+            sleep(sleep_time);
+        }
         scan(true, true, device.clone(), baudrate.clone(), &mut core, &mut client);
-        hat_off(false, true, &mut core, &mut client);
-        sleep(sleep_time);
+        if hat_b {
+            hat_off(false, true, &mut core, &mut client);
+            sleep(sleep_time);
+        }
         println!("==> Success");
     }
     
     println!("==> Get data from slave");
     let sleep_time = time::Duration::from_millis(1000);
-    hat_on(false, true, &mut core, &mut client);
-    sleep(sleep_time);
+    if hat_b {
+        hat_on(false, true, &mut core, &mut client);
+        sleep(sleep_time);
+    }
     get(true, true, device.clone(), baudrate.clone(), address.clone(), &mut core, &mut client);
-    hat_off(false, true, &mut core, &mut client);
-    sleep(sleep_time);
+    if hat_b {
+        hat_off(false, true, &mut core, &mut client);
+        sleep(sleep_time);
+    }
     println!("==> Success");
     
-    println!("==> Get data from slave with bus off");
-    let sleep_time = time::Duration::from_millis(1000);
-    hat_off(true, true, &mut core, &mut client);
-    sleep(sleep_time);
-    get(true, false, device.clone(), baudrate.clone(), address.clone(), &mut core, &mut client);
-    println!("==> Success");
+    if hat_b {
+        println!("==> Get data from slave with bus off");
+        let sleep_time = time::Duration::from_millis(1000);
+        hat_off(true, true, &mut core, &mut client);
+        sleep(sleep_time);
+        get(true, false, device.clone(), baudrate.clone(), address.clone(), &mut core, &mut client);
+        println!("==> Success");
+    }
 
-    println!("==> Leaving hat off");
-    hat_off(true, true, &mut core, &mut client);
-    println!("==> Success");
+    if hat_b {
+        println!("==> Leaving hat off");
+        hat_off(true, true, &mut core, &mut client);
+        println!("==> Success");
+    }
 
 }
 
