@@ -250,8 +250,8 @@ fn main() {
     }
 
     println!("====> Run tests {} times", reps);
-    for rep in 1..reps {
-        println!("===> Repetition {}", rep);
+    for rep in 0..reps {
+        println!("===> Repetition {}", rep+1);
         // Run tests
         if hat_b {
             println!("==> Test can get hat details when hat is off and on");
