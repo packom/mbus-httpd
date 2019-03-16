@@ -23,13 +23,29 @@ curl -fsSL https://get.docker.com -o get-docker.sh
 sh get-docker.sh
 ```
 
-Once docker is installed (and you may need to logout and back in after installing) you can run mbus-httpd using:
+Once docker is installed (and you may need to logout and back in after installing) you can run mbus-httpd using the following (replacing ttyAMA0 with your serial device):
 
 ```
-docker run --name mbus-httpd -d -p 8080:8080 -e RUST_LOG=INFO packom/mbus-httpd-release
+docker run --name mbus-httpd \
+          -d -p 8080:8080 \
+          -e RUST_LOG=INFO \
+          --device /dev/ttyAMA0:/dev/ttyAMA0 \
+          packom/mbus-httpd-release
 ```
 
 This will start the mbus-httpd web server listening on port 8080.
+
+If you're using an [M-Bus Master Hat](https://www.packom.net/m-bus-master-hat/) run the container like this instead:
+
+```
+docker run --name mbus-httpd \
+           -d -p 8080:8080 \
+           -e RUST_LOG=INFO \
+           --device /dev/ttyAMA0:/dev/ttyAMA0 \
+           -v /proc/device-tree/hat:/proc/device-tree/hat \
+           --privileged \
+           packom/mbus-httpd-release
+```
 
 To check whether it is working, from another shell run:
 
@@ -46,6 +62,30 @@ http://<your_host_name>:8080/mbus/api
 The [YAML API document](https://github.com/packom/mbus-httpd/blob/master/api/openapi.yaml) should be returned.
 
 ## Using
+
+If you're using an [M-Bus Master Hat](https://www.packom.net/m-bus-master-hat/) you can check that it is physically installed corrected by running:
+
+```
+curl -v -X GET http://localhost:8080/mbus/hat
+```
+
+You should be a response like:
+
+```
+{
+  "product":"M-Bus Master",
+  "productId":"0x0001",
+  "productVer":"0x0002",
+  "uuid":"abcdef12-abcd-abcd-abcd-123456abcdef",
+  "vendor":"packom.net"
+}
+```
+
+You need to power on the M-Bus if using an M-Bus Master hat using:
+
+```
+curl -v -X POST http://localhost:8080/mbus/hat/on
+```
 
 To scan the M-Bus connected to device /dev/ttyAMA0 at 2400 baud:
 
