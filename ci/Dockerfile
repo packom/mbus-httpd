@@ -1,4 +1,4 @@
-FROM piersfinlayson/build:0.2.5 as libmbus
+FROM piersfinlayson/build:0.2.6 as libmbus
 WORKDIR /home/build/builds
 RUN git clone https://github.com/rscada/libmbus
 WORKDIR /home/build/builds/libmbus
