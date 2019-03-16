@@ -79,13 +79,15 @@ fn main() {
 
     match matches.value_of("operation") {
 
+        /* Not quite sure why this doesn't compile
         Some("Api") => {
             let result = core.run(client.api());
             println!("{:?} (X-Span-ID: {:?})", result, (client.context() as &Has<XSpanIdString>).get().clone());
          },
+        */
 
         Some("Get") => {
-            let result = core.run(client.get("ttyAMA0".to_string(), serde_json::from_str::<models::Baudrate>("2400").expect("Failed to parse JSON example"), 48));
+            let result = core.run(client.get("ttyAMA0".to_string(), serde_json::from_str::<openapi_client::models::Baudrate>("2400").expect("Failed to parse JSON example"), 48));
             println!("{:?} (X-Span-ID: {:?})", result, (client.context() as &Has<XSpanIdString>).get().clone());
          },
 
@@ -105,7 +107,7 @@ fn main() {
          },
 
         Some("Scan") => {
-            let result = core.run(client.scan("ttyAMA0".to_string(), serde_json::from_str::<models::Baudrate>("2400").expect("Failed to parse JSON example")));
+            let result = core.run(client.scan("ttyAMA0".to_string(), serde_json::from_str::<openapi_client::models::Baudrate>("2400").expect("Failed to parse JSON example")));
             println!("{:?} (X-Span-ID: {:?})", result, (client.context() as &Has<XSpanIdString>).get().clone());
          },
 
