@@ -157,9 +157,9 @@ fn scan(
     match result {
         ScanResponse::OK(results) => { 
             if log { 
-                print!("success, found devices ");
+                print!("success, found devices");
                 for addr in Regex::new("[0-9]{1,3}").unwrap().find_iter(&results) {
-                    print!("{}", addr.as_str().parse::<i32>().unwrap());
+                    print!(" {}", addr.as_str().parse::<i32>().unwrap());
                 }
                 println!("");
             }
