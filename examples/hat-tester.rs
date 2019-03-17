@@ -53,6 +53,10 @@ use std::thread::sleep;
 use std::time;
 use regex::Regex;
 
+const PRODUCT: &str = "M-Bus Master";
+const PRODUCT_ID: &str = "0x0001";
+const VENDOR: &str = "packom.net";
+
 fn main() {
     let matches = App::new("mbus-httpd-hat-tester")
         .author("packom.net, mbus@packom.net")
@@ -100,6 +104,11 @@ fn main() {
             .long("uuid")
             .takes_value(true)
             .help("Test the installed Hat has the provided UUID"))
+        .arg(Arg::with_name("product-ver")
+            .long("product-ver")
+            .takes_value(true)
+            .default_value("0x0002")
+            .help("Hat Product Version"))
         .arg(Arg::with_name("scan")
             .long("scan")
             .help("Whether to scan the M-Bus"))
@@ -141,6 +150,14 @@ fn main() {
     } else {
         None
     };
+    let product_ver = matches.value_of("product-ver").unwrap();
+    let match_hat = Hat {
+        product: Some(PRODUCT.to_string()),
+        product_id: Some(PRODUCT_ID.to_string()),
+        product_ver: Some(product_ver.to_string()),
+        uuid: uuid,
+        vendor: Some(VENDOR.to_string()),
+    };
 
     // Create client
     let mut core = reactor::Core::new().unwrap();
@@ -169,11 +186,23 @@ fn main() {
             let sleep_time = time::Duration::from_millis(1000);
             hat_off(true, true, &mut core, &mut client);
             sleep(sleep_time);
-            get_hat(true, true, uuid.clone(), &mut core, &mut client);
+            get_hat(
+                true, 
+                true, 
+                &match_hat,
+                &mut core, 
+                &mut client
+            );
             sleep(sleep_time);
             hat_on(true, true, &mut core, &mut client);
             sleep(sleep_time);
-            get_hat(true, true, uuid.clone(), &mut core, &mut client);
+            get_hat(
+                true, 
+                true, 
+                &match_hat,
+                &mut core, 
+                &mut client
+            );
             sleep(sleep_time);
             println!("==> Success");
 
@@ -239,14 +268,19 @@ fn main() {
     }
 }
 
-trait Log {
+trait Process<T> {
     fn log_string(&self) -> String;
     fn log(&self);
+    fn validate(
+        &self, 
+        log: bool,
+        match_v: &T
+    );
 }
 
-impl Log for Hat {
+impl Process<Hat> for Hat {
     fn log_string(&self) -> String {
-        let mut output: String = String::new();
+        let mut output: String = "Hat details:\n".to_string();
         output = output + &format!("  Product:     {}\n", self.product.clone().unwrap_or("None".to_string()));
         output = output + &format!("  Product ID:  {}\n", self.product_id.clone().unwrap_or("None".to_string()));
         output = output + &format!("  Product Ver: {}\n", self.product_ver.clone().unwrap_or("None".to_string()));
@@ -257,6 +291,36 @@ impl Log for Hat {
 
     fn log(&self) {
         print!("{}", self.log_string());
+    }
+
+    fn validate(
+        &self, 
+        log: bool,
+        match_hat: &Hat,
+    ) {
+        if match_hat.product != self.product {
+            if log { println!("Incorrect Hat Product"); self.log()}
+            panic!(1);
+        }
+        if match_hat.product_id != self.product_id {
+            if log { println!("Incorrect Hat Product ID"); self.log(); }
+            panic!(1);
+        }
+        if match_hat.product_ver != self.product_ver {
+            if log { println!("Incorrect Hat Product Ver"); self.log(); }
+            panic!(1);
+        }
+        if match_hat.uuid.is_some() {
+            if match_hat.uuid.clone().unwrap() != self.uuid.clone().expect("No Hat UUID returned") {
+                if log { println!("Incorrect Hat UUID"); self.log(); }
+                panic!(1);
+            }
+        }
+        if match_hat.vendor != self.vendor {
+            if log { println!("Incorrect Hat Vendor"); self.log(); }
+            panic!(1);
+        }
+        if log { println!("Validated Hat details"); }
     }
 }
 
@@ -273,7 +337,7 @@ macro_rules! context {
 fn get_hat(
     log: bool, 
     succeed: bool, 
-    uuid: Option<String>,
+    match_hat: &Hat,
     core: &mut reactor::Core, 
     client: &mut Client<hyper::client::FutureResponse>
 ) {   
@@ -282,16 +346,8 @@ fn get_hat(
     match result {
         HatResponse::OK(hat) => { 
             if log { println!("success:") };
-            if log { hat.log() };
             if ! succeed { panic!(1) };
-            if uuid.is_some() {
-                if uuid.unwrap() != hat.uuid.expect("No Hat UUID returned") {
-                    if log { println!("Incorrect UUID"); }
-                    panic!(1);
-                } else {
-                    if log { println!("Correct UUID"); }
-                }
-            }
+            hat.validate(log, match_hat);
         },
         HatResponse::NotFound(_) => {
             if log { println!("no hat installed") };
