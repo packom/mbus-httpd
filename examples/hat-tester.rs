@@ -208,7 +208,7 @@ fn main() {
         
         println!("===> Run test {} times", get_reps);
         for rep in 0..get_reps {
-            println!("==> Get data from slave repition {}", rep);
+            println!("==> Get data from slave repetition {}", rep);
             let sleep_time = time::Duration::from_millis(1000);
             if hat_b {
                 hat_on(false, true, &mut core, &mut client);
