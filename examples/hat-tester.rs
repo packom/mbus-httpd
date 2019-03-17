@@ -6,20 +6,20 @@
 //  it under the terms of the GNU General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-//  
+//
 //  This program is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
-//  
+//
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
-//  
+//
 #![allow(missing_docs, unused_variables, trivial_casts)]
 
-extern crate openapi_client;
 #[allow(unused_extern_crates)]
 extern crate futures;
+extern crate openapi_client;
 #[allow(unused_extern_crates)]
 #[macro_use]
 extern crate swagger;
@@ -27,31 +27,26 @@ extern crate swagger;
 extern crate uuid;
 #[macro_use]
 extern crate clap;
-extern crate tokio_core;
 extern crate regex;
+extern crate tokio_core;
 
-use swagger::{ContextBuilder, EmptyContext, XSpanIdString, Push, AuthData};
+use swagger::{AuthData, ContextBuilder, EmptyContext, Push, XSpanIdString};
 
-#[allow(unused_imports)]
-use futures::{Future, future, Stream, stream};
-use tokio_core::reactor;
-#[allow(unused_imports)]
-use openapi_client::{ApiNoContext, ContextWrapperExt,
-                      ApiError,
-                      ApiResponse,
-                      GetResponse,
-                      HatResponse,
-                      HatOffResponse,
-                      HatOnResponse,
-                      ScanResponse
-                     };
 use clap::{App, Arg};
+#[allow(unused_imports)]
+use futures::{future, stream, Future, Stream};
 use openapi_client::models::{Address, Baudrate, Device, Hat};
-use openapi_client::Client;
 use openapi_client::Api;
+use openapi_client::Client;
+#[allow(unused_imports)]
+use openapi_client::{
+    ApiError, ApiNoContext, ApiResponse, ContextWrapperExt, GetResponse, HatOffResponse,
+    HatOnResponse, HatResponse, ScanResponse,
+};
+use regex::Regex;
 use std::thread::sleep;
 use std::time;
-use regex::Regex;
+use tokio_core::reactor;
 
 const PRODUCT: &str = "M-Bus Master";
 const PRODUCT_ID: &str = "0x0001";
@@ -124,9 +119,25 @@ fn main() {
         .get_matches();
 
     // Handle arguments
-    let device: Device = Device::from(matches.value_of("device").unwrap().parse::<String>().expect("Invalid valid for device"));
-    let baudrate: Baudrate = matches.value_of("baudrate").unwrap().parse().expect("Invalid valid for baudrate");
-    let address = Address::from(matches.value_of("address").unwrap().parse::<i32>().expect("Invalid valid for baudrate"));
+    let device: Device = Device::from(
+        matches
+            .value_of("device")
+            .unwrap()
+            .parse::<String>()
+            .expect("Invalid valid for device"),
+    );
+    let baudrate: Baudrate = matches
+        .value_of("baudrate")
+        .unwrap()
+        .parse()
+        .expect("Invalid valid for baudrate");
+    let address = Address::from(
+        matches
+            .value_of("address")
+            .unwrap()
+            .parse::<i32>()
+            .expect("Invalid valid for baudrate"),
+    );
     if i32::from(address.clone()) < 1 || i32::from(address.clone()) > 250 {
         println!("Address outside allowed range");
         panic!(1);
@@ -138,12 +149,20 @@ fn main() {
         Address::from(0)
     };
     let hat_b = matches.is_present("hat");
-    let reps = matches.value_of("repetitions").unwrap().parse::<i32>().expect("Invalid repetitions value");
+    let reps = matches
+        .value_of("repetitions")
+        .unwrap()
+        .parse::<i32>()
+        .expect("Invalid repetitions value");
     if reps < 1 {
         println!("Invalid repetitions value");
         panic!(1);
     }
-    let get_reps = matches.value_of("get-repetitions").unwrap().parse::<i32>().expect("Invalid repetitions value");
+    let get_reps = matches
+        .value_of("get-repetitions")
+        .unwrap()
+        .parse::<i32>()
+        .expect("Invalid repetitions value");
     if get_reps < 1 {
         println!("Invalid repetitions value");
         panic!(1);
@@ -167,10 +186,12 @@ fn main() {
     // Create client
     let mut core = reactor::Core::new().unwrap();
     let is_https = matches.is_present("https");
-    let base_url = format!("{}://{}:{}",
-                           if is_https { "https" } else { "http" },
-                           matches.value_of("host").unwrap(),
-                           matches.value_of("port").unwrap());
+    let base_url = format!(
+        "{}://{}:{}",
+        if is_https { "https" } else { "http" },
+        matches.value_of("host").unwrap(),
+        matches.value_of("port").unwrap()
+    );
     let mut client = if matches.is_present("https") {
         // Using Simple HTTPS
         openapi_client::Client::try_new_https(core.handle(), &base_url, "examples/ca.pem")
@@ -184,7 +205,7 @@ fn main() {
     // Run tests
     println!("====> Run tests {} times", reps);
     for rep in 0..reps {
-        println!("===> Repetition {}", rep+1);
+        println!("===> Repetition {}", rep + 1);
         // Run tests
         if hat_b {
             println!("==> Test can get hat details when hat is off and on");
@@ -193,26 +214,16 @@ fn main() {
                 .or_else(|e| errors.off())
                 .ok();
             sleep(sleep_time);
-            get_hat(
-                true, 
-                true, 
-                &match_hat,
-                &mut core, 
-                &mut client
-            ).or_else(|e| errors.hat())
+            get_hat(true, true, &match_hat, &mut core, &mut client)
+                .or_else(|e| errors.hat())
                 .ok();
             sleep(sleep_time);
             hat_on(true, true, &mut core, &mut client)
                 .or_else(|e| errors.on())
                 .ok();
             sleep(sleep_time);
-            get_hat(
-                true, 
-                true, 
-                &match_hat,
-                &mut core, 
-                &mut client
-            ).or_else(|e| errors.hat())
+            get_hat(true, true, &match_hat, &mut core, &mut client)
+                .or_else(|e| errors.hat())
                 .ok();
             sleep(sleep_time);
             println!("==> Success");
@@ -243,12 +254,20 @@ fn main() {
             if hat_b {
                 hat_on(false, true, &mut core, &mut client)
                     .or_else(|e| errors.on())
-                .ok();
+                    .ok();
                 sleep(sleep_time);
             }
-            scan(true, true, device.clone(), baudrate.clone(), match_addr.clone(), &mut core, &mut client)
-                .or_else(|e| errors.scan())
-                .ok();
+            scan(
+                true,
+                true,
+                device.clone(),
+                baudrate.clone(),
+                match_addr.clone(),
+                &mut core,
+                &mut client,
+            )
+            .or_else(|e| errors.scan())
+            .ok();
             if hat_b {
                 hat_off(false, true, &mut core, &mut client)
                     .or_else(|e| errors.off())
@@ -257,7 +276,7 @@ fn main() {
             }
             println!("==> Success");
         }
-        
+
         println!("===> Run test {} times", get_reps);
         for rep in 0..get_reps {
             println!("==> Get data from slave repetition {}", rep);
@@ -268,9 +287,17 @@ fn main() {
                     .ok();
                 sleep(sleep_time);
             }
-            get(true, true, device.clone(), baudrate.clone(), address.clone(), &mut core, &mut client)
-                .or_else(|e| errors.get())
-                .ok();
+            get(
+                true,
+                true,
+                device.clone(),
+                baudrate.clone(),
+                address.clone(),
+                &mut core,
+                &mut client,
+            )
+            .or_else(|e| errors.get())
+            .ok();
             if hat_b {
                 hat_off(false, true, &mut core, &mut client)
                     .or_else(|e| errors.off())
@@ -279,7 +306,7 @@ fn main() {
             }
             println!("==> Success");
         }
-        
+
         if hat_b {
             println!("==> Get data from slave with bus off");
             let sleep_time = time::Duration::from_millis(1000);
@@ -287,9 +314,17 @@ fn main() {
                 .or_else(|e| errors.off())
                 .ok();
             sleep(sleep_time);
-            get(true, false, device.clone(), baudrate.clone(), address.clone(), &mut core, &mut client)
-                .or_else(|e| errors.get())
-                .ok();
+            get(
+                true,
+                false,
+                device.clone(),
+                baudrate.clone(),
+                address.clone(),
+                &mut core,
+                &mut client,
+            )
+            .or_else(|e| errors.get())
+            .ok();
             println!("==> Success");
         }
 
@@ -302,7 +337,7 @@ fn main() {
         }
     }
 
-    println!("===> Failures");
+    println!("===> Results");
     errors.log();
 }
 
@@ -328,31 +363,41 @@ impl Errors {
     }
 
     fn hat(&mut self) -> Result<(), ()> {
-        if self.hard { panic!(1); }
+        if self.hard {
+            panic!(1);
+        }
         self.hat += 1;
         Ok(())
     }
 
     fn off(&mut self) -> Result<(), ()> {
-        if self.hard { panic!(1); }
+        if self.hard {
+            panic!(1);
+        }
         self.hat_off += 1;
         Ok(())
     }
 
     fn on(&mut self) -> Result<(), ()> {
-        if self.hard { panic!(1); }
+        if self.hard {
+            panic!(1);
+        }
         self.hat_on += 1;
         Ok(())
     }
 
     fn get(&mut self) -> Result<(), ()> {
-        if self.hard { panic!(1); }
+        if self.hard {
+            panic!(1);
+        }
         self.get += 1;
         Ok(())
     }
 
     fn scan(&mut self) -> Result<(), ()> {
-        if self.hard { panic!(1); }
+        if self.hard {
+            panic!(1);
+        }
         self.scan += 1;
         Ok(())
     }
@@ -369,21 +414,37 @@ impl Errors {
 trait Process<T> {
     fn log_string(&self) -> String;
     fn log(&self);
-    fn validate(
-        &self, 
-        log: bool,
-        match_v: &T
-    );
+    fn validate(&self, log: bool, match_v: &T);
 }
 
 impl Process<Hat> for Hat {
     fn log_string(&self) -> String {
         let mut output: String = "Hat details:\n".to_string();
-        output = output + &format!("  Product:     {}\n", self.product.clone().unwrap_or("None".to_string()));
-        output = output + &format!("  Product ID:  {}\n", self.product_id.clone().unwrap_or("None".to_string()));
-        output = output + &format!("  Product Ver: {}\n", self.product_ver.clone().unwrap_or("None".to_string()));
-        output = output + &format!("  UUID:        {}\n", self.uuid.clone().unwrap_or("None".to_string()));
-        output = output + &format!("  Vendor:      {}\n", self.vendor.clone().unwrap_or("None".to_string()));
+        output = output
+            + &format!(
+                "  Product:     {}\n",
+                self.product.clone().unwrap_or("None".to_string())
+            );
+        output = output
+            + &format!(
+                "  Product ID:  {}\n",
+                self.product_id.clone().unwrap_or("None".to_string())
+            );
+        output = output
+            + &format!(
+                "  Product Ver: {}\n",
+                self.product_ver.clone().unwrap_or("None".to_string())
+            );
+        output = output
+            + &format!(
+                "  UUID:        {}\n",
+                self.uuid.clone().unwrap_or("None".to_string())
+            );
+        output = output
+            + &format!(
+                "  Vendor:      {}\n",
+                self.vendor.clone().unwrap_or("None".to_string())
+            );
         output
     }
 
@@ -391,79 +452,117 @@ impl Process<Hat> for Hat {
         print!("{}", self.log_string());
     }
 
-    fn validate(
-        &self, 
-        log: bool,
-        match_hat: &Hat,
-    ) {
+    fn validate(&self, log: bool, match_hat: &Hat) {
         if match_hat.product != self.product {
-            if log { println!("Incorrect Hat Product"); self.log()}
+            if log {
+                println!("Incorrect Hat Product");
+                self.log()
+            }
             panic!(1);
         }
         if match_hat.product_id != self.product_id {
-            if log { println!("Incorrect Hat Product ID"); self.log(); }
+            if log {
+                println!("Incorrect Hat Product ID");
+                self.log();
+            }
             panic!(1);
         }
         if match_hat.product_ver != self.product_ver {
-            if log { println!("Incorrect Hat Product Ver"); self.log(); }
+            if log {
+                println!("Incorrect Hat Product Ver");
+                self.log();
+            }
             panic!(1);
         }
         if match_hat.uuid.is_some() {
             if match_hat.uuid.clone().unwrap() != self.uuid.clone().expect("No Hat UUID returned") {
-                if log { println!("Incorrect Hat UUID"); self.log(); }
+                if log {
+                    println!("Incorrect Hat UUID");
+                    self.log();
+                }
                 panic!(1);
             }
         }
         if match_hat.vendor != self.vendor {
-            if log { println!("Incorrect Hat Vendor"); self.log(); }
+            if log {
+                println!("Incorrect Hat Vendor");
+                self.log();
+            }
             panic!(1);
         }
-        if log { println!("Validated Hat details"); }
+        if log {
+            println!("Validated Hat details");
+        }
     }
 }
 
 macro_rules! succeed {
     ($s:ident) => {
-        if $s { Ok(()) } else { Err(()) }
-    }
+        if $s {
+            Ok(())
+        } else {
+            Err(())
+        }
+    };
 }
 
 macro_rules! fail {
     ($s:ident) => {
-        if $s { Err(()) } else { Ok(()) }
-    }
+        if $s {
+            Err(())
+        } else {
+            Ok(())
+        }
+    };
 }
 
 macro_rules! context {
-    () => {
-        {
-            let context: make_context_ty!(ContextBuilder, EmptyContext, Option<AuthData>, XSpanIdString) =
-            make_context!(ContextBuilder, EmptyContext, None as Option<AuthData>, XSpanIdString(self::uuid::Uuid::new_v4().to_string()));
-            context
-        }
-    }
+    () => {{
+        let context: make_context_ty!(
+            ContextBuilder,
+            EmptyContext,
+            Option<AuthData>,
+            XSpanIdString
+        ) = make_context!(
+            ContextBuilder,
+            EmptyContext,
+            None as Option<AuthData>,
+            XSpanIdString(self::uuid::Uuid::new_v4().to_string())
+        );
+        context
+    }};
 }
 
 fn get_hat(
-    log: bool, 
-    succeed: bool, 
+    log: bool,
+    succeed: bool,
     match_hat: &Hat,
-    core: &mut reactor::Core, 
-    client: &mut Client<hyper::client::FutureResponse>
-) -> Result<(), ()> {   
-    if log { print!("Get hat ... ") };
-    let result = core.run(client.hat(&context!())).expect("failed to contact server");
+    core: &mut reactor::Core,
+    client: &mut Client<hyper::client::FutureResponse>,
+) -> Result<(), ()> {
+    if log {
+        print!("Get hat ... ")
+    };
+    let result = core
+        .run(client.hat(&context!()))
+        .expect("failed to contact server");
     match result {
-        HatResponse::OK(hat) => { 
-            if log { println!("success:") };
-            if ! succeed { return Err(()) };
+        HatResponse::OK(hat) => {
+            if log {
+                println!("success:")
+            };
+            if !succeed {
+                return Err(());
+            };
             hat.validate(log, match_hat);
             Ok(())
-        },
+        }
         HatResponse::NotFound(_) => {
-            if log { println!("no hat installed") };
+            if log {
+                println!("no hat installed")
+            };
             fail!(succeed)
-        },
+        }
     }
 }
 
@@ -474,25 +573,43 @@ fn get(
     baudrate: Baudrate,
     address: Address,
     core: &mut reactor::Core,
-    client: &mut Client<hyper::client::FutureResponse>
-) -> Result<(), ()> {   
+    client: &mut Client<hyper::client::FutureResponse>,
+) -> Result<(), ()> {
     if log {
-        print!("Get info from device {}, baudrate {}, address {} ... ", String::from(device.clone()), baudrate, i32::from(address.clone()))
+        print!(
+            "Get info from device {}, baudrate {}, address {} ... ",
+            String::from(device.clone()),
+            baudrate,
+            i32::from(address.clone())
+        )
     }
-    let result = core.run(client.get(device.to_string(), baudrate, i32::from(address), &context!())).expect("failed to contact server");
+    let result = core
+        .run(client.get(
+            device.to_string(),
+            baudrate,
+            i32::from(address),
+            &context!(),
+        ))
+        .expect("failed to contact server");
     match result {
-        GetResponse::OK(info) => { 
-            if log { println!("success") };
+        GetResponse::OK(info) => {
+            if log {
+                println!("success")
+            };
             succeed!(succeed)
-        },
+        }
         GetResponse::BadRequest(e) => {
-            if log { println!("internal error {}", e)} ;
+            if log {
+                println!("internal error {}", e)
+            };
             fail!(succeed)
-        },
+        }
         GetResponse::NotFound(_) => {
-            if log { println!("no device found")} ;
+            if log {
+                println!("no device found")
+            };
             fail!(succeed)
-        },
+        }
     }
 }
 
@@ -500,19 +617,27 @@ fn hat_off(
     log: bool,
     succeed: bool,
     core: &mut reactor::Core,
-    client: &mut Client<hyper::client::FutureResponse>
-) -> Result<(), ()> {   
-    if log { print!("Hat off ... ") };
-    let result = core.run(client.hat_off(&context!())).expect("failed to contact server");
+    client: &mut Client<hyper::client::FutureResponse>,
+) -> Result<(), ()> {
+    if log {
+        print!("Hat off ... ")
+    };
+    let result = core
+        .run(client.hat_off(&context!()))
+        .expect("failed to contact server");
     match result {
-        HatOffResponse::OK => { 
-            if log { println!("success") };
+        HatOffResponse::OK => {
+            if log {
+                println!("success")
+            };
             succeed!(succeed)
-        },
+        }
         HatOffResponse::NotFound(_) => {
-            if log { println!("no hat installed")} ;
+            if log {
+                println!("no hat installed")
+            };
             fail!(succeed)
-        },
+        }
     }
 }
 
@@ -520,19 +645,27 @@ fn hat_on(
     log: bool,
     succeed: bool,
     core: &mut reactor::Core,
-    client: &mut Client<hyper::client::FutureResponse>
-) -> Result<(), ()> {   
-    if log { print!("Hat on  ... ") };
-    let result = core.run(client.hat_on(&context!())).expect("failed to contact server");
+    client: &mut Client<hyper::client::FutureResponse>,
+) -> Result<(), ()> {
+    if log {
+        print!("Hat on  ... ")
+    };
+    let result = core
+        .run(client.hat_on(&context!()))
+        .expect("failed to contact server");
     match result {
-        HatOnResponse::OK => { 
-            if log { println!("success") };
+        HatOnResponse::OK => {
+            if log {
+                println!("success")
+            };
             succeed!(succeed)
-        },
+        }
         HatOnResponse::NotFound(_) => {
-            if log { println!("no hat installed") };
+            if log {
+                println!("no hat installed")
+            };
             fail!(succeed)
-        },
+        }
     }
 }
 
@@ -543,39 +676,56 @@ fn scan(
     baudrate: Baudrate,
     address: Address,
     core: &mut reactor::Core,
-    client: &mut Client<hyper::client::FutureResponse>
-) -> Result<(), ()> {   
+    client: &mut Client<hyper::client::FutureResponse>,
+) -> Result<(), ()> {
     if log {
-        print!("Scan device {}, baudrate {} ... ", String::from(device.clone()), baudrate);
+        print!(
+            "Scan device {}, baudrate {} ... ",
+            String::from(device.clone()),
+            baudrate
+        );
     }
-    let result = core.run(client.scan(device.to_string(), baudrate, &context!())).expect("failed to contact server");
+    let result = core
+        .run(client.scan(device.to_string(), baudrate, &context!()))
+        .expect("failed to contact server");
     match result {
         ScanResponse::OK(results) => {
             let mut match_addr = false;
             for addr in Regex::new("[0-9]{1,3}").unwrap().find_iter(&results) {
                 let addr = addr.as_str().parse::<i32>().unwrap();
-                if log { print!("{} ", addr); }
+                if log {
+                    print!("{} ", addr);
+                }
                 if addr == i32::from(address.clone()) {
                     match_addr = true;
                 }
-                if log { println!(""); }
+                if log {
+                    println!("");
+                }
             }
-            if ! succeed { panic!(1) };
+            if !succeed {
+                panic!(1)
+            };
             if match_addr {
                 Ok(())
             } else {
-                if log { println!("Didn't find address {:?}", address); }
-                return Err(())
+                if log {
+                    println!("Didn't find address {:?}", address);
+                }
+                return Err(());
             }
-        },
+        }
         ScanResponse::BadRequest(e) => {
-            if log { println!("internal error {}", e)} ;
+            if log {
+                println!("internal error {}", e)
+            };
             fail!(succeed)
-        },
+        }
         ScanResponse::NotFound(_) => {
-            if log { println!("no device found")} ;
+            if log {
+                println!("no device found")
+            };
             fail!(succeed)
-        },
+        }
     }
 }
-

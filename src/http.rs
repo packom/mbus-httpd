@@ -6,23 +6,25 @@
 //  it under the terms of the GNU General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-//  
+//
 //  This program is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
-//  
+//
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
-//  
+//
 
 use openapi_client::models;
-use openapi_client::{ApiResponse, GetResponse, HatResponse, HatOffResponse, HatOnResponse, ScanResponse};
-use std::fs;
+use openapi_client::{
+    ApiResponse, GetResponse, HatOffResponse, HatOnResponse, HatResponse, ScanResponse,
+};
 use std::env;
+use std::fs;
+use std::path::Path;
 use std::process::Command;
 use std::str;
-use std::path::Path;
 use std::sync::Mutex;
 use sysfs_gpio::{Direction, Pin};
 
@@ -46,83 +48,89 @@ const MBUS_MASTER_HAT_VENDOR: &str = "packom.net";
 const MBUS_MASTER_POWER_GPIO: u64 = 26;
 
 pub fn get_env() -> Vec<&'static str> {
-    vec![LIBMBUS_PATH_VAR, LIBMBUS_GET_VAR, LIBMBUS_SCAN_VAR, LD_LIBRARY_PATH_VAR]
+    vec![
+        LIBMBUS_PATH_VAR,
+        LIBMBUS_GET_VAR,
+        LIBMBUS_SCAN_VAR,
+        LD_LIBRARY_PATH_VAR,
+    ]
 }
 
 lazy_static! {
-  static ref LIBMBUS_PATH: String = {
-    match env::var(LIBMBUS_PATH_VAR) {
-      Ok(v) => v,
-      Err(_) => LIBMBUS_PATH_DEF.to_string()
-    }
-  };
-  static ref LIBMBUS_GET: String = {
-    match env::var(LIBMBUS_GET_VAR) {
-      Ok(v) => v,
-      Err(_) => LIBMBUS_GET_DEF.to_string()
-    }
-  };
-  static ref LIBMBUS_SCAN: String = {
-    match env::var(LIBMBUS_SCAN_VAR) {
-      Ok(v) => v,
-      Err(_) => LIBMBUS_SCAN_DEF.to_string()
-    }
-  };
-  static ref GPIO: Pin = Pin::new(MBUS_MASTER_POWER_GPIO);
-  static ref BUS: Mutex<i32> = Mutex::new(0);
+    static ref LIBMBUS_PATH: String = {
+        match env::var(LIBMBUS_PATH_VAR) {
+            Ok(v) => v,
+            Err(_) => LIBMBUS_PATH_DEF.to_string(),
+        }
+    };
+    static ref LIBMBUS_GET: String = {
+        match env::var(LIBMBUS_GET_VAR) {
+            Ok(v) => v,
+            Err(_) => LIBMBUS_GET_DEF.to_string(),
+        }
+    };
+    static ref LIBMBUS_SCAN: String = {
+        match env::var(LIBMBUS_SCAN_VAR) {
+            Ok(v) => v,
+            Err(_) => LIBMBUS_SCAN_DEF.to_string(),
+        }
+    };
+    static ref GPIO: Pin = Pin::new(MBUS_MASTER_POWER_GPIO);
+    static ref BUS: Mutex<i32> = Mutex::new(0);
 }
 
 pub(crate) fn api() -> ApiResponse {
     info!("API {}", "api");
     let rsp = match fs::read_to_string("/static/api.yaml")
-        .map_err(|e| format!("Failed to read file: {}", e)) {
-      Ok(s) => ApiResponse::OK(s),
-      Err(e) => ApiResponse::NotFound(e),
+        .map_err(|e| format!("Failed to read file: {}", e))
+    {
+        Ok(s) => ApiResponse::OK(s),
+        Err(e) => ApiResponse::NotFound(e),
     };
     info!("API {} -> {:?}", "get_api", rsp);
     rsp
 }
 
 fn hat_exists() -> bool {
-  if Path::new(HAT_PATH).exists() {
-    true
-  } else {
-    info!("No hat path: {}", HAT_PATH);
-    false
-  }
+    if Path::new(HAT_PATH).exists() {
+        true
+    } else {
+        info!("No hat path: {}", HAT_PATH);
+        false
+    }
 }
 
 fn hat_get_value(field: &str) -> Option<String> {
-  let filename = HAT_PATH.to_owned() + field;
-  let path = Path::new(&filename);
-  if path.exists() {
-    fs::read_to_string(path)
-        .map_err(|e| {
-            info!("Failed to read hat value: {}, {}", field, e);
-            e
-        })
-        // Strip off NULL teminator from file
-        .map(|s| Some(s.trim_end_matches("\u{0000}").to_string()))
-        .unwrap_or(None)
-  } else {
-    info!("Hat value not present: {}", field);
-    None
-  }
+    let filename = HAT_PATH.to_owned() + field;
+    let path = Path::new(&filename);
+    if path.exists() {
+        fs::read_to_string(path)
+            .map_err(|e| {
+                info!("Failed to read hat value: {}, {}", field, e);
+                e
+            })
+            // Strip off NULL teminator from file
+            .map(|s| Some(s.trim_end_matches("\u{0000}").to_string()))
+            .unwrap_or(None)
+    } else {
+        info!("Hat value not present: {}", field);
+        None
+    }
 }
 
 pub(crate) fn hat() -> HatResponse {
     info!("API {}", "hat");
 
     let rsp = if hat_exists() {
-      HatResponse::OK(models::Hat {
-          product: hat_get_value(HAT_PRODUCT),
-          product_id: hat_get_value(HAT_PRODUCT_ID),
-          product_ver: hat_get_value(HAT_PRODUCT_VER),
-          uuid: hat_get_value(HAT_UUID),
-          vendor: hat_get_value(HAT_VENDOR),
+        HatResponse::OK(models::Hat {
+            product: hat_get_value(HAT_PRODUCT),
+            product_id: hat_get_value(HAT_PRODUCT_ID),
+            product_ver: hat_get_value(HAT_PRODUCT_VER),
+            uuid: hat_get_value(HAT_UUID),
+            vendor: hat_get_value(HAT_VENDOR),
         })
     } else {
-      HatResponse::NotFound("Hat not present".to_string()) 
+        HatResponse::NotFound("Hat not present".to_string())
     };
 
     info!("API {} -> {:?}", "hat", rsp);
@@ -130,72 +138,75 @@ pub(crate) fn hat() -> HatResponse {
 }
 
 fn hat_is_mbus_master() -> bool {
-  if ! hat_exists() {
-    return false;
-  }
+    if !hat_exists() {
+        return false;
+    }
 
-  let pid = hat_get_value(HAT_PRODUCT_ID).unwrap_or("".to_string());
-  let vendor = hat_get_value(HAT_VENDOR).unwrap_or("".to_string());
+    let pid = hat_get_value(HAT_PRODUCT_ID).unwrap_or("".to_string());
+    let vendor = hat_get_value(HAT_VENDOR).unwrap_or("".to_string());
 
-  if pid != MBUS_MASTER_HAT_PID {
-    info!("Hat product ID not M-Bus Master: {}", pid);
-    return false;
-  }
+    if pid != MBUS_MASTER_HAT_PID {
+        info!("Hat product ID not M-Bus Master: {}", pid);
+        return false;
+    }
 
-  if vendor != MBUS_MASTER_HAT_VENDOR {
-    info!("Hat vendor not M-Bus Master: {}", vendor);
-    return false;
-  }
+    if vendor != MBUS_MASTER_HAT_VENDOR {
+        info!("Hat vendor not M-Bus Master: {}", vendor);
+        return false;
+    }
 
-  true
+    true
 }
 
 fn hat_power(val: u8) -> Result<(), String> {
-  if hat_is_mbus_master() {
-    if ! GPIO.is_exported() {
-      GPIO.export()
-        .map_err(|e| format!("Failed to get GPIO control: {}", e))?;
+    if hat_is_mbus_master() {
+        if !GPIO.is_exported() {
+            GPIO.export()
+                .map_err(|e| format!("Failed to get GPIO control: {}", e))?;
+        }
+        GPIO.set_direction(Direction::Out)
+            .map_err(|e| format!("Failed to set GPIO as output: {}", e))?;
+        GPIO.set_value(val)
+            .map_err(|e| format!("Failed to set GPIO value: {}, {}", val, e))?;
+        Ok(())
+    } else {
+        Err("M-Bus Master Hat not installed".to_string())
     }
-    GPIO.set_direction(Direction::Out)
-        .map_err(|e| format!("Failed to set GPIO as output: {}", e))?;
-    GPIO.set_value(val)
-        .map_err(|e| format!("Failed to set GPIO value: {}, {}", val, e))?;
-    Ok(())
-  } else {
-      Err("M-Bus Master Hat not installed".to_string())
-  }
 }
 
 pub(crate) fn hat_off() -> HatOffResponse {
-  info!("API {}", "hat_off");
+    info!("API {}", "hat_off");
 
-  let rsp = match hat_power(0) {
-    Ok(_) => HatOffResponse::OK,
-    Err(e) => HatOffResponse::NotFound(e),
-  };
+    let rsp = match hat_power(0) {
+        Ok(_) => HatOffResponse::OK,
+        Err(e) => HatOffResponse::NotFound(e),
+    };
 
-  info!("API {} -> {:?}", "hat_off", rsp);
-  rsp
+    info!("API {} -> {:?}", "hat_off", rsp);
+    rsp
 }
 
 pub(crate) fn hat_on() -> HatOnResponse {
-  info!("API {}", "hat_on");
+    info!("API {}", "hat_on");
 
-  let rsp = match hat_power(1) {
-    Ok(_) => HatOnResponse::OK,
-    Err(e) => HatOnResponse::NotFound(e),
-  };
+    let rsp = match hat_power(1) {
+        Ok(_) => HatOnResponse::OK,
+        Err(e) => HatOnResponse::NotFound(e),
+    };
 
-  info!("API {} -> {:?}", "hat_on", rsp);
-  rsp
+    info!("API {} -> {:?}", "hat_on", rsp);
+    rsp
 }
 
 fn check_address(address: &i32) -> Result<(), String> {
-  if *address < 1 || *address > 250 {
-    Err(format!("Couldn't parse path parameter {}: {}, 1 <= address <= 250", "address", address))
-  } else {
-    Ok(())
-  }
+    if *address < 1 || *address > 250 {
+        Err(format!(
+            "Couldn't parse path parameter {}: {}, 1 <= address <= 250",
+            "address", address
+        ))
+    } else {
+        Ok(())
+    }
 }
 
 pub(crate) fn get(device: &String, baudrate: &models::Baudrate, address: &i32) -> GetResponse {
@@ -203,13 +214,13 @@ pub(crate) fn get(device: &String, baudrate: &models::Baudrate, address: &i32) -
 
     // Check parameters
     match check_address(address) {
-      Ok(_) => (),
-      Err(s) => return GetResponse::BadRequest(s)
+        Ok(_) => (),
+        Err(s) => return GetResponse::BadRequest(s),
     };
 
     let lock = BUS.try_lock();
     if lock.is_err() {
-      return GetResponse::NotFound("Bus is currently in use".to_string());
+        return GetResponse::NotFound("Bus is currently in use".to_string());
     }
 
     // Construct mbus command like this:
@@ -219,35 +230,39 @@ pub(crate) fn get(device: &String, baudrate: &models::Baudrate, address: &i32) -
     info!("Executing: {} -b {} {} {}", cmd, baudrate, dev, address);
     // XXX Todo - execute as a future
     let rsp = match Command::new(cmd)
-                  .arg("-b")
-                  .arg(baudrate.to_string())
-                  .arg(dev)
-                  .arg(address.to_string())
-                  .output() {
-      Ok(o) => {
-        if o.status.success() {
-          match str::from_utf8(&o.stdout) {
-            // Should already be XML
-            Ok(s) => GetResponse::OK(s.to_string()),
-            // Somehow failed to convert stdout to a string!
-            Err(e) => GetResponse::NotFound(format!("Failed to query M-Bus: {:?}", e)),
-          }
-        } else {
-          // Process returned an error code
-          let code = match o.status.code() {
-            Some(c) => c.to_string(),
-            None => "None".to_string(),
-          };
-          // Get stderr (not stdout)
-          let stderr = match str::from_utf8(&o.stderr) {
-            Ok(s) => s.to_string(),
-            Err(e) => format!("Failed to parse stderr {:?}", e),
-          };
-          GetResponse::NotFound(format!("Failed to query M-Bus: Internal error, return code {}, stderr {}", code, stderr))
+        .arg("-b")
+        .arg(baudrate.to_string())
+        .arg(dev)
+        .arg(address.to_string())
+        .output()
+    {
+        Ok(o) => {
+            if o.status.success() {
+                match str::from_utf8(&o.stdout) {
+                    // Should already be XML
+                    Ok(s) => GetResponse::OK(s.to_string()),
+                    // Somehow failed to convert stdout to a string!
+                    Err(e) => GetResponse::NotFound(format!("Failed to query M-Bus: {:?}", e)),
+                }
+            } else {
+                // Process returned an error code
+                let code = match o.status.code() {
+                    Some(c) => c.to_string(),
+                    None => "None".to_string(),
+                };
+                // Get stderr (not stdout)
+                let stderr = match str::from_utf8(&o.stderr) {
+                    Ok(s) => s.to_string(),
+                    Err(e) => format!("Failed to parse stderr {:?}", e),
+                };
+                GetResponse::NotFound(format!(
+                    "Failed to query M-Bus: Internal error, return code {}, stderr {}",
+                    code, stderr
+                ))
+            }
         }
-      },
-      // Actually executing the process failed - couldn't find the process?
-      Err(e) => GetResponse::NotFound(format!("Failed to query M-Bus: Internal error {:?}", e)),
+        // Actually executing the process failed - couldn't find the process?
+        Err(e) => GetResponse::NotFound(format!("Failed to query M-Bus: Internal error {:?}", e)),
     };
 
     info!("API {} -> {:?}", "get", rsp);
@@ -259,7 +274,7 @@ pub(crate) fn scan(device: &String, baudrate: &models::Baudrate) -> ScanResponse
 
     let lock = BUS.try_lock();
     if lock.is_err() {
-      return ScanResponse::NotFound("Bus is currently in use".to_string());
+        return ScanResponse::NotFound("Bus is currently in use".to_string());
     }
 
     // Construct libmbus exec like this:
@@ -269,34 +284,38 @@ pub(crate) fn scan(device: &String, baudrate: &models::Baudrate) -> ScanResponse
     info!("Executing: {} -b {} {}", cmd, baudrate, dev);
     // XXX Todo - execute as a future
     let rsp = match Command::new(cmd)
-                  .arg("-b")
-                  .arg(baudrate.to_string())
-                  .arg(dev)
-                  .output() {
-      // XXX Don't duplicate following code
-      Ok(o) => {
-        if o.status.success() {
-          match str::from_utf8(&o.stdout) {
-            Ok(s) => ScanResponse::OK(s.to_string()), // XXX Actually, need to convert to XML
-            // Somehow failed to convert stdout to a string!
-            Err(e) => ScanResponse::NotFound(format!("Failed to query M-Bus: {:?}", e)),
-          }
-        } else {
-          // Process returned an error code
-          let code = match o.status.code() {
-            Some(c) => c.to_string(),
-            None => "None".to_string(),
-          };
-          // Get stderr (not stdout)
-          let stderr = match str::from_utf8(&o.stderr) {
-            Ok(s) => s.to_string(),
-            Err(e) => format!("Failed to parse stderr {:?}", e),
-          };
-          ScanResponse::NotFound(format!("Failed to query M-Bus: Internal error, return code {}, stderr {}", code, stderr))
+        .arg("-b")
+        .arg(baudrate.to_string())
+        .arg(dev)
+        .output()
+    {
+        // XXX Don't duplicate following code
+        Ok(o) => {
+            if o.status.success() {
+                match str::from_utf8(&o.stdout) {
+                    Ok(s) => ScanResponse::OK(s.to_string()), // XXX Actually, need to convert to XML
+                    // Somehow failed to convert stdout to a string!
+                    Err(e) => ScanResponse::NotFound(format!("Failed to query M-Bus: {:?}", e)),
+                }
+            } else {
+                // Process returned an error code
+                let code = match o.status.code() {
+                    Some(c) => c.to_string(),
+                    None => "None".to_string(),
+                };
+                // Get stderr (not stdout)
+                let stderr = match str::from_utf8(&o.stderr) {
+                    Ok(s) => s.to_string(),
+                    Err(e) => format!("Failed to parse stderr {:?}", e),
+                };
+                ScanResponse::NotFound(format!(
+                    "Failed to query M-Bus: Internal error, return code {}, stderr {}",
+                    code, stderr
+                ))
+            }
         }
-      },
-      // Actually executing the process failed - couldn't find the process?
-      Err(e) => ScanResponse::NotFound(format!("Failed to query M-Bus: Internal error {:?}", e)),
+        // Actually executing the process failed - couldn't find the process?
+        Err(e) => ScanResponse::NotFound(format!("Failed to query M-Bus: Internal error {:?}", e)),
     };
 
     info!("API {} -> {:?}", "scan", rsp);
