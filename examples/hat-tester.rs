@@ -116,6 +116,9 @@ fn main() {
         .arg(Arg::with_name("hard")
             .long("hard")
             .help("Hard mode - any error exits"))
+        .arg(Arg::with_name("verbose")
+            .long("verbose")
+            .help("Verbose logging"))
         .get_matches();
 
     // Handle arguments
@@ -181,6 +184,7 @@ fn main() {
         vendor: Some(VENDOR.to_string()),
     };
     let hard = matches.is_present("hard");
+    let verbose = matches.is_present("verbose");
     let mut errors = Errors::new(hard);
 
     // Create client
@@ -210,19 +214,19 @@ fn main() {
         if hat_b {
             println!("==> Test can get hat details when hat is off and on");
             let sleep_time = time::Duration::from_millis(1000);
-            hat_off(true, true, &mut core, &mut client)
+            hat_off(verbose, true, &mut core, &mut client)
                 .or_else(|e| errors.off())
                 .ok();
             sleep(sleep_time);
-            get_hat(true, true, &match_hat, &mut core, &mut client)
+            get_hat(verbose, true, &match_hat, &mut core, &mut client)
                 .or_else(|e| errors.hat())
                 .ok();
             sleep(sleep_time);
-            hat_on(true, true, &mut core, &mut client)
+            hat_on(verbose, true, &mut core, &mut client)
                 .or_else(|e| errors.on())
                 .ok();
             sleep(sleep_time);
-            get_hat(true, true, &match_hat, &mut core, &mut client)
+            get_hat(verbose, true, &match_hat, &mut core, &mut client)
                 .or_else(|e| errors.hat())
                 .ok();
             sleep(sleep_time);
@@ -258,7 +262,7 @@ fn main() {
                 sleep(sleep_time);
             }
             scan(
-                true,
+                verbose,
                 true,
                 device.clone(),
                 baudrate.clone(),
@@ -289,7 +293,7 @@ fn main() {
             println!("==> Get data from slave repetition {}", rep+1);
             let sleep_time = time::Duration::from_millis(10);
             get(
-                true,
+                verbose,
                 true,
                 device.clone(),
                 baudrate.clone(),
@@ -313,12 +317,12 @@ fn main() {
         if hat_b {
             println!("==> Get data from slave with bus off");
             let sleep_time = time::Duration::from_millis(1000);
-            hat_off(true, true, &mut core, &mut client)
+            hat_off(false, true, &mut core, &mut client)
                 .or_else(|e| errors.off())
                 .ok();
             sleep(sleep_time);
             get(
-                true,
+                verbose,
                 false,
                 device.clone(),
                 baudrate.clone(),
@@ -333,7 +337,7 @@ fn main() {
 
         if hat_b {
             println!("==> Leaving hat off");
-            hat_off(true, true, &mut core, &mut client)
+            hat_off(false, true, &mut core, &mut client)
                 .or_else(|e| errors.off())
                 .ok();
             println!("==> Success");
