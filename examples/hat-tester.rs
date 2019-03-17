@@ -278,15 +278,16 @@ fn main() {
         }
 
         println!("===> Run test {} times", get_reps);
+        let sleep_time = time::Duration::from_millis(1000);
+        if hat_b {
+            hat_on(false, true, &mut core, &mut client)
+                .or_else(|e| errors.on())
+                .ok();
+            sleep(sleep_time);
+        }
         for rep in 0..get_reps {
             println!("==> Get data from slave repetition {}", rep+1);
-            let sleep_time = time::Duration::from_millis(1000);
-            if hat_b {
-                hat_on(false, true, &mut core, &mut client)
-                    .or_else(|e| errors.on())
-                    .ok();
-                sleep(sleep_time);
-            }
+            let sleep_time = time::Duration::from_millis(10);
             get(
                 true,
                 true,
@@ -298,13 +299,15 @@ fn main() {
             )
             .or_else(|e| errors.get())
             .ok();
-            if hat_b {
-                hat_off(false, true, &mut core, &mut client)
-                    .or_else(|e| errors.off())
-                    .ok();
-                sleep(sleep_time);
-            }
             println!("==> Success");
+            sleep(sleep_time);
+        }
+        let sleep_time = time::Duration::from_millis(1000);
+        if hat_b {
+            hat_off(false, true, &mut core, &mut client)
+                .or_else(|e| errors.off())
+                .ok();
+            sleep(sleep_time);
         }
 
         if hat_b {
