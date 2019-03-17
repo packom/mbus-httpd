@@ -173,12 +173,6 @@ cargo run --example hat-tester
 
 This is designed to do functional and burn-in testing of the [M-Bus Master Hat](https://www.packom.net/m-bus-master-hat/), and is fairly self-explanatory.
 
-To get help on the command-line options:
-
-```
-cargo run --example hat-tester -- --help
-```
-
 To run, doing a full suite of tests on an M-Bus Master Hat:
 
 ```
@@ -208,6 +202,12 @@ cargo run --example hat-tester -- \
           --device ttyUSB0 \
           --scan \
           --check-scan
+```
+
+To get help on and see other command-line options:
+
+```
+cargo run --example hat-tester -- --help
 ```
 
 ### Debugging

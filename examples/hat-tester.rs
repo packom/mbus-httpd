@@ -118,6 +118,9 @@ fn main() {
         .arg(Arg::with_name("hat")
             .long("hat")
             .help("Whether to test Hat specific functions"))
+        .arg(Arg::with_name("hard")
+            .long("hard")
+            .help("Hard mode - any error exits"))
         .get_matches();
 
     // Handle arguments
@@ -158,6 +161,8 @@ fn main() {
         uuid: uuid,
         vendor: Some(VENDOR.to_string()),
     };
+    let hard = matches.is_present("hard");
+    let mut errors = Errors::new(hard);
 
     // Create client
     let mut core = reactor::Core::new().unwrap();
@@ -184,7 +189,9 @@ fn main() {
         if hat_b {
             println!("==> Test can get hat details when hat is off and on");
             let sleep_time = time::Duration::from_millis(1000);
-            hat_off(true, true, &mut core, &mut client);
+            hat_off(true, true, &mut core, &mut client)
+                .or_else(|e| errors.off())
+                .ok();
             sleep(sleep_time);
             get_hat(
                 true, 
@@ -192,9 +199,12 @@ fn main() {
                 &match_hat,
                 &mut core, 
                 &mut client
-            );
+            ).or_else(|e| errors.hat())
+                .ok();
             sleep(sleep_time);
-            hat_on(true, true, &mut core, &mut client);
+            hat_on(true, true, &mut core, &mut client)
+                .or_else(|e| errors.on())
+                .ok();
             sleep(sleep_time);
             get_hat(
                 true, 
@@ -202,20 +212,27 @@ fn main() {
                 &match_hat,
                 &mut core, 
                 &mut client
-            );
+            ).or_else(|e| errors.hat())
+                .ok();
             sleep(sleep_time);
             println!("==> Success");
 
             println!("==> Test fast hat switching");
             let mut sleep_time = time::Duration::from_millis(10);
             for i in 1..100 {
-                hat_off(false, true, &mut core, &mut client);
+                hat_off(false, true, &mut core, &mut client)
+                    .or_else(|e| errors.off())
+                    .ok();
                 sleep(sleep_time);
-                hat_on(false, true, &mut core, &mut client);
+                hat_on(false, true, &mut core, &mut client)
+                    .or_else(|e| errors.on())
+                    .ok();
                 sleep(sleep_time);
                 sleep_time = sleep_time + time::Duration::from_millis(2);
             }
-            hat_off(false, true, &mut core, &mut client);
+            hat_off(false, true, &mut core, &mut client)
+                .or_else(|e| errors.off())
+                .ok();
             sleep(sleep_time);
             println!("==> Success");
         }
@@ -224,12 +241,18 @@ fn main() {
             println!("==> Scan bus");
             let sleep_time = time::Duration::from_millis(1000);
             if hat_b {
-                hat_on(false, true, &mut core, &mut client);
+                hat_on(false, true, &mut core, &mut client)
+                    .or_else(|e| errors.on())
+                .ok();
                 sleep(sleep_time);
             }
-            scan(true, true, device.clone(), baudrate.clone(), match_addr.clone(), &mut core, &mut client);
+            scan(true, true, device.clone(), baudrate.clone(), match_addr.clone(), &mut core, &mut client)
+                .or_else(|e| errors.scan())
+                .ok();
             if hat_b {
-                hat_off(false, true, &mut core, &mut client);
+                hat_off(false, true, &mut core, &mut client)
+                    .or_else(|e| errors.off())
+                    .ok();
                 sleep(sleep_time);
             }
             println!("==> Success");
@@ -240,12 +263,18 @@ fn main() {
             println!("==> Get data from slave repetition {}", rep);
             let sleep_time = time::Duration::from_millis(1000);
             if hat_b {
-                hat_on(false, true, &mut core, &mut client);
+                hat_on(false, true, &mut core, &mut client)
+                    .or_else(|e| errors.on())
+                    .ok();
                 sleep(sleep_time);
             }
-            get(true, true, device.clone(), baudrate.clone(), address.clone(), &mut core, &mut client);
+            get(true, true, device.clone(), baudrate.clone(), address.clone(), &mut core, &mut client)
+                .or_else(|e| errors.get())
+                .ok();
             if hat_b {
-                hat_off(false, true, &mut core, &mut client);
+                hat_off(false, true, &mut core, &mut client)
+                    .or_else(|e| errors.off())
+                    .ok();
                 sleep(sleep_time);
             }
             println!("==> Success");
@@ -254,17 +283,86 @@ fn main() {
         if hat_b {
             println!("==> Get data from slave with bus off");
             let sleep_time = time::Duration::from_millis(1000);
-            hat_off(true, true, &mut core, &mut client);
+            hat_off(true, true, &mut core, &mut client)
+                .or_else(|e| errors.off())
+                .ok();
             sleep(sleep_time);
-            get(true, false, device.clone(), baudrate.clone(), address.clone(), &mut core, &mut client);
+            get(true, false, device.clone(), baudrate.clone(), address.clone(), &mut core, &mut client)
+                .or_else(|e| errors.get())
+                .ok();
             println!("==> Success");
         }
 
         if hat_b {
             println!("==> Leaving hat off");
-            hat_off(true, true, &mut core, &mut client);
+            hat_off(true, true, &mut core, &mut client)
+                .or_else(|e| errors.off())
+                .ok();
             println!("==> Success");
         }
+    }
+
+    println!("===> Results");
+    errors.log();
+}
+
+struct Errors {
+    hat: i32,
+    hat_off: i32,
+    hat_on: i32,
+    get: i32,
+    scan: i32,
+    hard: bool,
+}
+
+impl Errors {
+    fn new(hard: bool) -> Self {
+        Errors {
+            hat: 0,
+            hat_off: 0,
+            hat_on: 0,
+            get: 0,
+            scan: 0,
+            hard,
+        }
+    }
+
+    fn hat(&mut self) -> Result<(), ()> {
+        if self.hard { panic!(1); }
+        self.hat += 1;
+        Ok(())
+    }
+
+    fn off(&mut self) -> Result<(), ()> {
+        if self.hard { panic!(1); }
+        self.hat_off += 1;
+        Ok(())
+    }
+
+    fn on(&mut self) -> Result<(), ()> {
+        if self.hard { panic!(1); }
+        self.hat_on += 1;
+        Ok(())
+    }
+
+    fn get(&mut self) -> Result<(), ()> {
+        if self.hard { panic!(1); }
+        self.get += 1;
+        Ok(())
+    }
+
+    fn scan(&mut self) -> Result<(), ()> {
+        if self.hard { panic!(1); }
+        self.scan += 1;
+        Ok(())
+    }
+
+    fn log(&self) {
+        println!("  Hat info: {}", self.hat);
+        println!("  Hat off:  {}", self.hat_off);
+        println!("  Hat on:   {}", self.hat_on);
+        println!("  Get data: {}", self.get);
+        println!("  Scan:     {}", self.scan);
     }
 }
 
@@ -324,6 +422,18 @@ impl Process<Hat> for Hat {
     }
 }
 
+macro_rules! succeed {
+    ($s:ident) => {
+        if $s { Ok(()) } else { Err(()) }
+    }
+}
+
+macro_rules! fail {
+    ($s:ident) => {
+        if $s { Err(()) } else { Ok(()) }
+    }
+}
+
 macro_rules! context {
     () => {
         {
@@ -340,18 +450,19 @@ fn get_hat(
     match_hat: &Hat,
     core: &mut reactor::Core, 
     client: &mut Client<hyper::client::FutureResponse>
-) {   
+) -> Result<(), ()> {   
     if log { print!("Get hat ... ") };
     let result = core.run(client.hat(&context!())).expect("failed to contact server");
     match result {
         HatResponse::OK(hat) => { 
             if log { println!("success:") };
-            if ! succeed { panic!(1) };
+            if ! succeed { return Err(()) };
             hat.validate(log, match_hat);
+            Ok(())
         },
         HatResponse::NotFound(_) => {
             if log { println!("no hat installed") };
-            if succeed { panic!(1) };
+            fail!(succeed)
         },
     }
 }
@@ -364,7 +475,7 @@ fn get(
     address: Address,
     core: &mut reactor::Core,
     client: &mut Client<hyper::client::FutureResponse>
-) {   
+) -> Result<(), ()> {   
     if log {
         print!("Get info from device {}, baudrate {}, address {} ... ", String::from(device.clone()), baudrate, i32::from(address.clone()))
     }
@@ -372,45 +483,55 @@ fn get(
     match result {
         GetResponse::OK(info) => { 
             if log { println!("success") };
-            if ! succeed { panic!(1) };
+            succeed!(succeed)
         },
         GetResponse::BadRequest(e) => {
             if log { println!("internal error {}", e)} ;
-            if succeed { panic!(1) };
+            fail!(succeed)
         },
         GetResponse::NotFound(_) => {
             if log { println!("no device found")} ;
-            if succeed { panic!(1) };
+            fail!(succeed)
         },
     }
 }
 
-fn hat_off(log: bool, succeed: bool, core: &mut reactor::Core, client: &mut Client<hyper::client::FutureResponse>) {   
+fn hat_off(
+    log: bool,
+    succeed: bool,
+    core: &mut reactor::Core,
+    client: &mut Client<hyper::client::FutureResponse>
+) -> Result<(), ()> {   
     if log { print!("Hat off ... ") };
     let result = core.run(client.hat_off(&context!())).expect("failed to contact server");
     match result {
         HatOffResponse::OK => { 
             if log { println!("success") };
-            if ! succeed { panic!(1) };
+            succeed!(succeed)
         },
         HatOffResponse::NotFound(_) => {
             if log { println!("no hat installed")} ;
-            if succeed { panic!(1) };
+            fail!(succeed)
         },
     }
 }
 
-fn hat_on(log: bool, succeed: bool, core: &mut reactor::Core, client: &mut Client<hyper::client::FutureResponse>) {   
+fn hat_on(
+    log: bool,
+    succeed: bool,
+    core: &mut reactor::Core,
+    client: &mut Client<hyper::client::FutureResponse>
+) -> Result<(), ()> {   
     if log { print!("Hat on  ... ") };
     let result = core.run(client.hat_on(&context!())).expect("failed to contact server");
     match result {
         HatOnResponse::OK => { 
             if log { println!("success") };
-            if ! succeed { panic!(1) };
+            succeed!(succeed)
         },
         HatOnResponse::NotFound(_) => {
             if log { println!("no hat installed") };
-            if succeed { panic!(1) };
+            fail!(succeed)
         },
     }
 }
@@ -423,7 +544,7 @@ fn scan(
     address: Address,
     core: &mut reactor::Core,
     client: &mut Client<hyper::client::FutureResponse>
-) {   
+) -> Result<(), ()> {   
     if log {
         print!("Scan device {}, baudrate {} ... ", String::from(device.clone()), baudrate);
     }
@@ -440,18 +561,20 @@ fn scan(
                 if log { println!(""); }
             }
             if ! succeed { panic!(1) };
-            if ! match_addr {
+            if match_addr {
+                Ok(())
+            } else {
                 if log { println!("Didn't find address {:?}", address); }
-                panic!(1);
+                return Err(())
             }
         },
         ScanResponse::BadRequest(e) => {
             if log { println!("internal error {}", e)} ;
-            if succeed { panic!(1) };
+            fail!(succeed)
         },
         ScanResponse::NotFound(_) => {
             if log { println!("no device found")} ;
-            if succeed { panic!(1) };
+            fail!(succeed)
         },
     }
 }
