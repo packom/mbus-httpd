@@ -302,7 +302,7 @@ fn main() {
         }
     }
 
-    println!("===> Results");
+    println!("===> Failures");
     errors.log();
 }
 
