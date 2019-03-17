@@ -193,6 +193,7 @@ cargo run --example hat-tester -- \
           --hat \
           --scan \
           --check-scan \
+          --product-ver 0x0002 \
           --uuid=148f8981-033b-407a-a13f-72405d08e0fe
 ```
 
