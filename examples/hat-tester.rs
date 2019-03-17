@@ -47,11 +47,22 @@ use regex::Regex;
 use std::thread::sleep;
 use std::time;
 use tokio_core::reactor;
+use std::process::exit;
 
 const PRODUCT: &str = "M-Bus Master";
 const PRODUCT_ID: &str = "0x0001";
 const VENDOR: &str = "packom.net";
 
+macro_rules! outputsf {
+    ($f: ident) => {
+        if ! $f {
+            println!("==> Success")
+        } else {
+            println!("==> Failed")
+        }
+    }
+}
+            
 fn main() {
     let matches = App::new("mbus-httpd-hat-tester")
         .author("packom.net, mbus@packom.net")
@@ -143,7 +154,7 @@ fn main() {
     );
     if i32::from(address.clone()) < 1 || i32::from(address.clone()) > 250 {
         println!("Address outside allowed range");
-        panic!(1);
+        exit(1);
     }
     let scan_b = matches.is_present("scan");
     let match_addr = if matches.is_present("check-scan") {
@@ -159,7 +170,7 @@ fn main() {
         .expect("Invalid repetitions value");
     if reps < 1 {
         println!("Invalid repetitions value");
-        panic!(1);
+        exit(1);
     }
     let get_reps = matches
         .value_of("get-repetitions")
@@ -168,7 +179,7 @@ fn main() {
         .expect("Invalid repetitions value");
     if get_reps < 1 {
         println!("Invalid repetitions value");
-        panic!(1);
+        exit(1);
     }
     let uuid: Option<String> = if matches.is_present("uuid") {
         Some(matches.value_of("uuid").unwrap().to_string())
@@ -213,51 +224,54 @@ fn main() {
         // Run tests
         if hat_b {
             println!("==> Test can get hat details when hat is off and on");
+            let mut failed = false;
             let sleep_time = time::Duration::from_millis(1000);
             hat_off(verbose, true, &mut core, &mut client)
-                .or_else(|e| errors.off())
+                .or_else(|e| { failed = true; errors.off() } )
                 .ok();
             sleep(sleep_time);
             get_hat(verbose, true, &match_hat, &mut core, &mut client)
-                .or_else(|e| errors.hat())
+                .or_else(|e| { failed = true; errors.hat() } )
                 .ok();
             sleep(sleep_time);
             hat_on(verbose, true, &mut core, &mut client)
-                .or_else(|e| errors.on())
+                .or_else(|e| { failed = true; errors.on() } )
                 .ok();
             sleep(sleep_time);
             get_hat(verbose, true, &match_hat, &mut core, &mut client)
-                .or_else(|e| errors.hat())
+                .or_else(|e| { failed = true; errors.hat() } )
                 .ok();
             sleep(sleep_time);
-            println!("==> Success");
+            outputsf!(failed);
 
             println!("==> Test fast hat switching");
+            let mut failed = false;
             let mut sleep_time = time::Duration::from_millis(10);
             for i in 1..100 {
                 hat_off(false, true, &mut core, &mut client)
-                    .or_else(|e| errors.off())
+                    .or_else(|e| { failed = true; errors.off() } )
                     .ok();
                 sleep(sleep_time);
                 hat_on(false, true, &mut core, &mut client)
-                    .or_else(|e| errors.on())
+                    .or_else(|e| { failed = true; errors.on() } )
                     .ok();
                 sleep(sleep_time);
                 sleep_time = sleep_time + time::Duration::from_millis(2);
             }
             hat_off(false, true, &mut core, &mut client)
-                .or_else(|e| errors.off())
+                .or_else(|e| { failed = true; errors.off() } )
                 .ok();
             sleep(sleep_time);
-            println!("==> Success");
+            outputsf!(failed);
         }
 
         if scan_b {
             println!("==> Scan bus");
+            let mut failed = false;
             let sleep_time = time::Duration::from_millis(1000);
             if hat_b {
                 hat_on(false, true, &mut core, &mut client)
-                    .or_else(|e| errors.on())
+                    .or_else(|e| { failed = true; errors.on() } )
                     .ok();
                 sleep(sleep_time);
             }
@@ -270,28 +284,29 @@ fn main() {
                 &mut core,
                 &mut client,
             )
-            .or_else(|e| errors.scan())
+            .or_else(|e| { failed = true; errors.scan() } )
             .ok();
             if hat_b {
                 hat_off(false, true, &mut core, &mut client)
-                    .or_else(|e| errors.off())
+                    .or_else(|e| { failed = true; errors.off() } )
                     .ok();
                 sleep(sleep_time);
             }
-            println!("==> Success");
+            outputsf!(failed);
         }
 
         println!("===> Run test {} times", get_reps);
         let sleep_time = time::Duration::from_millis(1000);
         if hat_b {
             hat_on(false, true, &mut core, &mut client)
-                .or_else(|e| errors.on())
+                .or_else(|e| errors.on() )
                 .ok();
             sleep(sleep_time);
         }
+        let sleep_time = time::Duration::from_millis(10);
         for rep in 0..get_reps {
             println!("==> Get data from slave repetition {}", rep+1);
-            let sleep_time = time::Duration::from_millis(10);
+            let mut failed = false;
             get(
                 verbose,
                 true,
@@ -301,24 +316,25 @@ fn main() {
                 &mut core,
                 &mut client,
             )
-            .or_else(|e| errors.get())
+            .or_else(|e| { failed = true; errors.get() } )
             .ok();
-            println!("==> Success");
+            outputsf!(failed);
             sleep(sleep_time);
         }
         let sleep_time = time::Duration::from_millis(1000);
         if hat_b {
             hat_off(false, true, &mut core, &mut client)
-                .or_else(|e| errors.off())
+                .or_else(|e| errors.off() )
                 .ok();
             sleep(sleep_time);
         }
 
         if hat_b {
             println!("==> Get data from slave with bus off");
+            let mut failed = false;
             let sleep_time = time::Duration::from_millis(1000);
             hat_off(false, true, &mut core, &mut client)
-                .or_else(|e| errors.off())
+                .or_else(|e| { failed = true; errors.off() } )
                 .ok();
             sleep(sleep_time);
             get(
@@ -330,21 +346,22 @@ fn main() {
                 &mut core,
                 &mut client,
             )
-            .or_else(|e| errors.get())
+            .or_else(|e| { failed = true; errors.get() } )
             .ok();
-            println!("==> Success");
+            outputsf!(failed);
         }
 
         if hat_b {
             println!("==> Leaving hat off");
+            let mut failed = false;
             hat_off(false, true, &mut core, &mut client)
-                .or_else(|e| errors.off())
+                .or_else(|e| { failed = true; errors.off() } )
                 .ok();
-            println!("==> Success");
+            outputsf!(failed);
         }
     }
 
-    println!("===> Results");
+    println!("===> Failures");
     errors.log();
 }
 
@@ -371,7 +388,8 @@ impl Errors {
 
     fn hat(&mut self) -> Result<(), ()> {
         if self.hard {
-            panic!(1);
+            println!("Hat failed");
+            exit(1);
         }
         self.hat += 1;
         Ok(())
@@ -379,7 +397,8 @@ impl Errors {
 
     fn off(&mut self) -> Result<(), ()> {
         if self.hard {
-            panic!(1);
+            println!("Hat off failed");
+            exit(1);
         }
         self.hat_off += 1;
         Ok(())
@@ -387,7 +406,8 @@ impl Errors {
 
     fn on(&mut self) -> Result<(), ()> {
         if self.hard {
-            panic!(1);
+            println!("Hat on failed");
+            exit(1);
         }
         self.hat_on += 1;
         Ok(())
@@ -395,7 +415,8 @@ impl Errors {
 
     fn get(&mut self) -> Result<(), ()> {
         if self.hard {
-            panic!(1);
+            println!("Get failed");
+            exit(1);
         }
         self.get += 1;
         Ok(())
@@ -403,7 +424,8 @@ impl Errors {
 
     fn scan(&mut self) -> Result<(), ()> {
         if self.hard {
-            panic!(1);
+            println!("Scan failed");
+            exit(1);
         }
         self.scan += 1;
         Ok(())
@@ -465,21 +487,21 @@ impl Process<Hat> for Hat {
                 println!("Incorrect Hat Product");
                 self.log()
             }
-            panic!(1);
+            exit(1);
         }
         if match_hat.product_id != self.product_id {
             if log {
                 println!("Incorrect Hat Product ID");
                 self.log();
             }
-            panic!(1);
+            exit(1);
         }
         if match_hat.product_ver != self.product_ver {
             if log {
                 println!("Incorrect Hat Product Ver");
                 self.log();
             }
-            panic!(1);
+            exit(1);
         }
         if match_hat.uuid.is_some() {
             if match_hat.uuid.clone().unwrap() != self.uuid.clone().expect("No Hat UUID returned") {
@@ -487,7 +509,7 @@ impl Process<Hat> for Hat {
                     println!("Incorrect Hat UUID");
                     self.log();
                 }
-                panic!(1);
+                exit(1);
             }
         }
         if match_hat.vendor != self.vendor {
@@ -495,7 +517,7 @@ impl Process<Hat> for Hat {
                 println!("Incorrect Hat Vendor");
                 self.log();
             }
-            panic!(1);
+            exit(1);
         }
         if log {
             println!("Validated Hat details");
@@ -711,7 +733,7 @@ fn scan(
                 }
             }
             if !succeed {
-                panic!(1)
+                exit(1)
             };
             if match_addr {
                 Ok(())
