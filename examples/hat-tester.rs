@@ -1,3 +1,20 @@
+//
+//  hat-tester - A tester for mbus-httpd
+//  Copyright (C) 2019  packom.net
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//  
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//  
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//  
 #![allow(missing_docs, unused_variables, trivial_casts)]
 
 extern crate openapi_client;
@@ -36,6 +53,192 @@ use std::thread::sleep;
 use std::time;
 use regex::Regex;
 
+fn main() {
+    let matches = App::new("mbus-httpd-hat-tester")
+        .author("packom.net, mbus@packom.net")
+        .version(crate_version!())
+        .about("An app to test the function of an M-Bus Master Hat.\nSee https://www.packom.net/m-bus-master-hat/\n(C) Copyright 2019  packom.net")
+        .arg(Arg::with_name("https")
+            .long("https")
+            .help("Whether to use HTTPS or not"))
+        .arg(Arg::with_name("host")
+            .long("host")
+            .takes_value(true)
+            .default_value("localhost")
+            .help("Hostname to contact"))
+        .arg(Arg::with_name("port")
+            .long("port")
+            .takes_value(true)
+            .default_value("80")
+            .help("Port to contact"))
+        .arg(Arg::with_name("device")
+            .long("device")
+            .takes_value(true)
+            .default_value("ttyAMA0")
+            .help("Device M-Bus is attached to, e.g. ttyAMA0"))
+        .arg(Arg::with_name("baudrate")
+            .long("baudrate")
+            .takes_value(true)
+            .default_value("2400")
+            .help("Baudrate to communicate with M-Bus"))
+        .arg(Arg::with_name("address")
+            .long("address")
+            .takes_value(true)
+            .default_value("48")
+            .help("M-Bus slave address to communicate with 1 <= address <= 250"))
+        .arg(Arg::with_name("get-repetitions")
+            .long("get-reps")
+            .takes_value(true)
+            .default_value("1")
+            .help("Number of times to repeat the get test (with the hat on)"))
+        .arg(Arg::with_name("repetitions")
+            .long("reps")
+            .takes_value(true)
+            .default_value("1")
+            .help("Number of times to repeat all the tests"))
+        .arg(Arg::with_name("uuid")
+            .long("uuid")
+            .takes_value(true)
+            .help("Test the installed Hat has the provided UUID"))
+        .arg(Arg::with_name("scan")
+            .long("scan")
+            .help("Whether to scan the M-Bus"))
+        .arg(Arg::with_name("check-scan")
+            .long("check-scan")
+            .help("Whether to check scan finds address"))
+        .arg(Arg::with_name("hat")
+            .long("hat")
+            .help("Whether to test Hat specific functions"))
+        .get_matches();
+
+    // Handle arguments
+    let device: Device = Device::from(matches.value_of("device").unwrap().parse::<String>().expect("Invalid valid for device"));
+    let baudrate: Baudrate = matches.value_of("baudrate").unwrap().parse().expect("Invalid valid for baudrate");
+    let address = Address::from(matches.value_of("address").unwrap().parse::<i32>().expect("Invalid valid for baudrate"));
+    if i32::from(address.clone()) < 1 || i32::from(address.clone()) > 250 {
+        println!("Address outside allowed range");
+        panic!(1);
+    }
+    let scan_b = matches.is_present("scan");
+    let match_addr = if matches.is_present("check-scan") {
+        address.clone()
+    } else {
+        Address::from(0)
+    };
+    let hat_b = matches.is_present("hat");
+    let reps = matches.value_of("repetitions").unwrap().parse::<i32>().expect("Invalid repetitions value");
+    if reps < 1 {
+        println!("Invalid repetitions value");
+        panic!(1);
+    }
+    let get_reps = matches.value_of("get-repetitions").unwrap().parse::<i32>().expect("Invalid repetitions value");
+    if get_reps < 1 {
+        println!("Invalid repetitions value");
+        panic!(1);
+    }
+    let uuid: Option<String> = if matches.is_present("uuid") {
+        Some(matches.value_of("uuid").unwrap().to_string())
+    } else {
+        None
+    };
+
+    // Create client
+    let mut core = reactor::Core::new().unwrap();
+    let is_https = matches.is_present("https");
+    let base_url = format!("{}://{}:{}",
+                           if is_https { "https" } else { "http" },
+                           matches.value_of("host").unwrap(),
+                           matches.value_of("port").unwrap());
+    let mut client = if matches.is_present("https") {
+        // Using Simple HTTPS
+        openapi_client::Client::try_new_https(core.handle(), &base_url, "examples/ca.pem")
+            .expect("Failed to create HTTPS client")
+    } else {
+        // Using HTTP
+        openapi_client::Client::try_new_http(core.handle(), &base_url)
+            .expect("Failed to create HTTP client")
+    };
+
+    // Run tests
+    println!("====> Run tests {} times", reps);
+    for rep in 0..reps {
+        println!("===> Repetition {}", rep+1);
+        // Run tests
+        if hat_b {
+            println!("==> Test can get hat details when hat is off and on");
+            let sleep_time = time::Duration::from_millis(1000);
+            hat_off(true, true, &mut core, &mut client);
+            sleep(sleep_time);
+            get_hat(true, true, uuid.clone(), &mut core, &mut client);
+            sleep(sleep_time);
+            hat_on(true, true, &mut core, &mut client);
+            sleep(sleep_time);
+            get_hat(true, true, uuid.clone(), &mut core, &mut client);
+            sleep(sleep_time);
+            println!("==> Success");
+
+            println!("==> Test fast hat switching");
+            let mut sleep_time = time::Duration::from_millis(10);
+            for i in 1..100 {
+                hat_off(false, true, &mut core, &mut client);
+                sleep(sleep_time);
+                hat_on(false, true, &mut core, &mut client);
+                sleep(sleep_time);
+                sleep_time = sleep_time + time::Duration::from_millis(2);
+            }
+            hat_off(false, true, &mut core, &mut client);
+            sleep(sleep_time);
+            println!("==> Success");
+        }
+
+        if scan_b {
+            println!("==> Scan bus");
+            let sleep_time = time::Duration::from_millis(1000);
+            if hat_b {
+                hat_on(false, true, &mut core, &mut client);
+                sleep(sleep_time);
+            }
+            scan(true, true, device.clone(), baudrate.clone(), match_addr.clone(), &mut core, &mut client);
+            if hat_b {
+                hat_off(false, true, &mut core, &mut client);
+                sleep(sleep_time);
+            }
+            println!("==> Success");
+        }
+        
+        println!("===> Run test {} times", get_reps);
+        for rep in 0..get_reps {
+            println!("==> Get data from slave repition {}", rep);
+            let sleep_time = time::Duration::from_millis(1000);
+            if hat_b {
+                hat_on(false, true, &mut core, &mut client);
+                sleep(sleep_time);
+            }
+            get(true, true, device.clone(), baudrate.clone(), address.clone(), &mut core, &mut client);
+            if hat_b {
+                hat_off(false, true, &mut core, &mut client);
+                sleep(sleep_time);
+            }
+            println!("==> Success");
+        }
+        
+        if hat_b {
+            println!("==> Get data from slave with bus off");
+            let sleep_time = time::Duration::from_millis(1000);
+            hat_off(true, true, &mut core, &mut client);
+            sleep(sleep_time);
+            get(true, false, device.clone(), baudrate.clone(), address.clone(), &mut core, &mut client);
+            println!("==> Success");
+        }
+
+        if hat_b {
+            println!("==> Leaving hat off");
+            hat_off(true, true, &mut core, &mut client);
+            println!("==> Success");
+        }
+    }
+}
+
 trait Log {
     fn log_string(&self) -> String;
     fn log(&self);
@@ -67,7 +270,13 @@ macro_rules! context {
     }
 }
 
-fn get_hat(log: bool, succeed: bool, core: &mut reactor::Core, client: &mut Client<hyper::client::FutureResponse>) {   
+fn get_hat(
+    log: bool, 
+    succeed: bool, 
+    uuid: Option<String>,
+    core: &mut reactor::Core, 
+    client: &mut Client<hyper::client::FutureResponse>
+) {   
     if log { print!("Get hat ... ") };
     let result = core.run(client.hat(&context!())).expect("failed to contact server");
     match result {
@@ -75,6 +284,14 @@ fn get_hat(log: bool, succeed: bool, core: &mut reactor::Core, client: &mut Clie
             if log { println!("success:") };
             if log { hat.log() };
             if ! succeed { panic!(1) };
+            if uuid.is_some() {
+                if uuid.unwrap() != hat.uuid.expect("No Hat UUID returned") {
+                    if log { println!("Incorrect UUID"); }
+                    panic!(1);
+                } else {
+                    if log { println!("Correct UUID"); }
+                }
+            }
         },
         HatResponse::NotFound(_) => {
             if log { println!("no hat installed") };
@@ -147,6 +364,7 @@ fn scan(
     succeed: bool,
     device: Device,
     baudrate: Baudrate,
+    address: Address,
     core: &mut reactor::Core,
     client: &mut Client<hyper::client::FutureResponse>
 ) {   
@@ -155,15 +373,21 @@ fn scan(
     }
     let result = core.run(client.scan(device.to_string(), baudrate, &context!())).expect("failed to contact server");
     match result {
-        ScanResponse::OK(results) => { 
-            if log { 
-                print!("success, found devices:");
-                for addr in Regex::new("[0-9]{1,3}").unwrap().find_iter(&results) {
-                    print!(" {}", addr.as_str().parse::<i32>().unwrap());
+        ScanResponse::OK(results) => {
+            let mut match_addr = false;
+            for addr in Regex::new("[0-9]{1,3}").unwrap().find_iter(&results) {
+                let addr = addr.as_str().parse::<i32>().unwrap();
+                if log { print!("{} ", addr); }
+                if addr == i32::from(address.clone()) {
+                    match_addr = true;
                 }
-                println!("");
+                if log { println!(""); }
             }
             if ! succeed { panic!(1) };
+            if ! match_addr {
+                if log { println!("Didn't find address {:?}", address); }
+                panic!(1);
+            }
         },
         ScanResponse::BadRequest(e) => {
             if log { println!("internal error {}", e)} ;
@@ -173,154 +397,6 @@ fn scan(
             if log { println!("no device found")} ;
             if succeed { panic!(1) };
         },
-    }
-}
-
-fn main() {
-    let matches = App::new("mbus-httpd-hat-tester")
-        .author("packom.net, mbus@packom.net")
-        .version(crate_version!())
-        .about("An app to test the function of an M-Bus Master Hat.\nSee https://www.packom.net/m-bus-master-hat/\n(C) Copyright 2019  packom.net")
-        .arg(Arg::with_name("https")
-            .long("https")
-            .help("Whether to use HTTPS or not"))
-        .arg(Arg::with_name("host")
-            .long("host")
-            .takes_value(true)
-            .default_value("localhost")
-            .help("Hostname to contact"))
-        .arg(Arg::with_name("port")
-            .long("port")
-            .takes_value(true)
-            .default_value("80")
-            .help("Port to contact"))
-        .arg(Arg::with_name("device")
-            .long("device")
-            .takes_value(true)
-            .default_value("ttyAMA0")
-            .help("Device M-Bus is attached to, e.g. ttyAMA0"))
-        .arg(Arg::with_name("baudrate")
-            .long("baudrate")
-            .takes_value(true)
-            .default_value("2400")
-            .help("Baudrate to communicate with M-Bus"))
-        .arg(Arg::with_name("address")
-            .long("address")
-            .takes_value(true)
-            .default_value("48")
-            .help("M-Bus slave address to communicate with"))
-        .arg(Arg::with_name("repetitions")
-            .long("reps")
-            .takes_value(true)
-            .default_value("1")
-            .help("Number of times to repeat the tests"))
-        .arg(Arg::with_name("scan")
-            .long("scan")
-            .help("Whether to scan the M-Bus"))
-        .arg(Arg::with_name("hat")
-            .long("hat")
-            .help("Whether to test Hat specific functions"))
-        .get_matches();
-
-    let mut core = reactor::Core::new().unwrap();
-    let is_https = matches.is_present("https");
-    let base_url = format!("{}://{}:{}",
-                           if is_https { "https" } else { "http" },
-                           matches.value_of("host").unwrap(),
-                           matches.value_of("port").unwrap());
-    let mut client = if matches.is_present("https") {
-        // Using Simple HTTPS
-        openapi_client::Client::try_new_https(core.handle(), &base_url, "examples/ca.pem")
-            .expect("Failed to create HTTPS client")
-    } else {
-        // Using HTTP
-        openapi_client::Client::try_new_http(core.handle(), &base_url)
-            .expect("Failed to create HTTP client")
-    };
-
-    let device: Device = Device::from(matches.value_of("device").unwrap().parse::<String>().expect("Invalid valid for device"));
-    let baudrate: Baudrate = matches.value_of("baudrate").unwrap().parse().expect("Invalid valid for baudrate");
-    let address = Address::from(matches.value_of("address").unwrap().parse::<i32>().expect("Invalid valid for baudrate"));
-    let scan_b = matches.is_present("scan");
-    let hat_b = matches.is_present("hat");
-    let reps = matches.value_of("repetitions").unwrap().parse::<i32>().expect("Invalid repetitions value");
-    if reps < 1 {
-        println!("Invalid repetitions value");
-        panic!(1);
-    }
-
-    println!("====> Run tests {} times", reps);
-    for rep in 0..reps {
-        println!("===> Repetition {}", rep+1);
-        // Run tests
-        if hat_b {
-            println!("==> Test can get hat details when hat is off and on");
-            let sleep_time = time::Duration::from_millis(1000);
-            hat_off(true, true, &mut core, &mut client);
-            sleep(sleep_time);
-            get_hat(true, true, &mut core, &mut client);
-            sleep(sleep_time);
-            hat_on(true, true, &mut core, &mut client);
-            sleep(sleep_time);
-            get_hat(true, true, &mut core, &mut client);
-            sleep(sleep_time);
-            println!("==> Success");
-
-            println!("==> Test fast hat switching");
-            let sleep_time = time::Duration::from_millis(10);
-            for i in 1..100 {
-                hat_off(false, true, &mut core, &mut client);
-                sleep(sleep_time);
-                hat_on(false, true, &mut core, &mut client);
-                sleep(sleep_time);
-            }
-            hat_off(false, true, &mut core, &mut client);
-            sleep(sleep_time);
-            println!("==> Success");
-        }
-
-        if scan_b {
-            println!("==> Scan bus");
-            let sleep_time = time::Duration::from_millis(1000);
-            if hat_b {
-                hat_on(false, true, &mut core, &mut client);
-                sleep(sleep_time);
-            }
-            scan(true, true, device.clone(), baudrate.clone(), &mut core, &mut client);
-            if hat_b {
-                hat_off(false, true, &mut core, &mut client);
-                sleep(sleep_time);
-            }
-            println!("==> Success");
-        }
-        
-        println!("==> Get data from slave");
-        let sleep_time = time::Duration::from_millis(1000);
-        if hat_b {
-            hat_on(false, true, &mut core, &mut client);
-            sleep(sleep_time);
-        }
-        get(true, true, device.clone(), baudrate.clone(), address.clone(), &mut core, &mut client);
-        if hat_b {
-            hat_off(false, true, &mut core, &mut client);
-            sleep(sleep_time);
-        }
-        println!("==> Success");
-        
-        if hat_b {
-            println!("==> Get data from slave with bus off");
-            let sleep_time = time::Duration::from_millis(1000);
-            hat_off(true, true, &mut core, &mut client);
-            sleep(sleep_time);
-            get(true, false, device.clone(), baudrate.clone(), address.clone(), &mut core, &mut client);
-            println!("==> Success");
-        }
-
-        if hat_b {
-            println!("==> Leaving hat off");
-            hat_off(true, true, &mut core, &mut client);
-            println!("==> Success");
-        }
     }
 }
 

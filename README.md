@@ -163,6 +163,52 @@ env RUST_LOG=INFO \
 cargo run
 ```
 
+### Clients
+
+A sample mbus-httpd client implemented in Rust is provided.  To build and run:
+
+```
+cargo run --example hat-tester
+```
+
+This is designed to do functional and burn-in testing of the [M-Bus Master Hat](https://www.packom.net/m-bus-master-hat/), and is fairly self-explanatory.
+
+To get help on the command-line options:
+
+```
+cargo run --example hat-tester -- --help
+```
+
+To run, doing a full suite of tests on an M-Bus Master Hat:
+
+```
+cargo run --example hat-tester -- \
+          --host localhost \
+          --port 8080 \
+          --address 48 \
+          --baudrate 2400 \
+          --device ttyAMA0 \
+          --reps 10 \
+          --get-reps 100 \
+          --hat \
+          --scan \
+          --check-scan \
+          --uuid=148f8981-033b-407a-a13f-72405d08e0fe
+```
+
+To run on another type of M-Bus Master, connected at device /dev/ttyUSB0 use like this:
+
+```
+cargo run --example hat-tester -- \
+          --host localhost \
+          --port 8080 \
+          --address 48 \
+          --baudrate 2400 \
+          --device ttyUSB0 \
+          --scan \
+          --check-scan
+```
+
 ### Debugging
 
 To view logs, make sure RUST_LOG is set to INFO or DEBUG (see above).  If running in a shell the logs will be output to stdout.  If running within docker you can view the logs using:
