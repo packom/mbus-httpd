@@ -29,6 +29,7 @@ extern crate uuid;
 extern crate clap;
 extern crate regex;
 extern crate tokio_core;
+extern crate httpd_util;
 
 use swagger::{AuthData, ContextBuilder, EmptyContext, Push, XSpanIdString};
 
@@ -64,6 +65,8 @@ macro_rules! outputsf {
 }
             
 fn main() {
+    httpd_util::reg_for_sigs();
+
     let matches = App::new("mbus-httpd-hat-tester")
         .author("packom.net, mbus@packom.net")
         .version(crate_version!())
