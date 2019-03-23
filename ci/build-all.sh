@@ -79,11 +79,37 @@ if [[ ! $BIN ]];
     exit 1
 fi
 
+# mbus-httpd
+
 X86_64_TAG=$REPO/$BIN-$TYPE-x86_64:$VERSION
 ARM_TAG=$REPO/$BIN-$TYPE-arm:$VERSION
 ARMV7_TAG=$REPO/$BIN-$TYPE-armv7:$VERSION
 GEN_TAG_V=$REPO/$BIN-$TYPE:$VERSION
 GEN_TAG_L=$REPO/$BIN-$TYPE:latest
+
+docker manifest create $GEN_TAG_V $X86_64_TAG $ARM_TAG $ARMV7_TAG
+docker manifest annotate --arch amd64 --os linux $GEN_TAG_V $X86_64_TAG
+docker manifest annotate --arch arm --os linux --variant armv6l $GEN_TAG_V $ARM_TAG
+docker manifest annotate --arch arm --os linux --variant armv7l $GEN_TAG_V $ARMV7_TAG
+docker manifest inspect $GEN_TAG_V
+docker manifest push --purge $GEN_TAG_V
+docker pull $GEN_TAG_V
+
+docker manifest create $GEN_TAG_L $X86_64_TAG $ARM_TAG $ARMV7_TAG
+docker manifest annotate --arch amd64 --os linux $GEN_TAG_L $X86_64_TAG
+docker manifest annotate --arch arm --os linux --variant armv6l $GEN_TAG_L $ARM_TAG
+docker manifest annotate --arch arm --os linux --variant armv7l $GEN_TAG_L $ARMV7_TAG
+docker manifest inspect $GEN_TAG_L
+docker manifest push --purge $GEN_TAG_L
+docker pull $GEN_TAG_L
+
+# hat-tester
+
+X86_64_TAG=$REPO/$BIN-hat-tester-$TYPE-x86_64:$VERSION
+ARM_TAG=$REPO/$BIN-hat-tester-$TYPE-arm:$VERSION
+ARMV7_TAG=$REPO/$BIN-hat-tester-$TYPE-armv7:$VERSION
+GEN_TAG_V=$REPO/$BIN-hat-tester-$TYPE:$VERSION
+GEN_TAG_L=$REPO/$BIN-hat-tester-$TYPE:latest
 
 docker manifest create $GEN_TAG_V $X86_64_TAG $ARM_TAG $ARMV7_TAG
 docker manifest annotate --arch amd64 --os linux $GEN_TAG_V $X86_64_TAG

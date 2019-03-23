@@ -1,0 +1,14 @@
+FROM piersfinlayson/build:0.2.6 as hat-tester
+WORKDIR /home/build/builds
+RUN git clone https://github.com/packom/mbus-httpd
+WORKDIR /home/build/builds/mbus-httpd
+ARG TYPE
+ARG TARGET
+RUN cargo build $TYPE --target=$TARGET --example=hat-tester
+
+FROM scratch
+WORKDIR /
+ARG TARGET
+ARG COPY_TYPE
+COPY --from=hat-tester /home/build/builds/mbus-httpd/target/$TARGET/$COPY_TYPE/examples/hat-tester .
+CMD ["/hat-tester"]

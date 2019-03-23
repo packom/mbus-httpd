@@ -86,6 +86,7 @@ fi
 DIR=tmp/$BIN-$TYPE-$ARCH-$VERSION
 CIDIR=ci/$DIR
 TAG=$REPO/$BIN-$TYPE-$ARCH:$VERSION
+TAG_HAT_TESTER=$REPO/$BIN-hat-tester-$TYPE-$ARCH:$VERSION
 
 echo "Creating container for"
 echo "  Binary:    $BIN"
@@ -94,6 +95,7 @@ echo "  Target:    $TARGET"
 echo "  Type:      $TYPE"
 echo "  Version:   $VERSION"
 echo "  Tag:       $TAG"
+echo "  Tag2:      $TAG_HAT_TESTER"
 echo "  gcc:       $GCC"
 echo "  ar:        $AR"
 echo "  Repo:      $REPO"
@@ -104,7 +106,7 @@ mkdir -p $CIDIR
 echo "Getting API: ./api/openapi.yaml"
 cp ./api/openapi.yaml $CIDIR/api.yaml
 
-echo "docker build -t $TAG --build-arg DIR=$DIR --build-arg TYPE=$BUILD_TYPE --build-arg COPY_TYPE=$TYPE $NO_CACHE --build-arg TARGET=$TARGET ./ci"
+echo "docker build -t $TAG --build-arg DIR=$DIR --build-arg TYPE=$BUILD_TYPE --build-arg COPY_TYPE=$TYPE --build-arg TARGET=$TARGET $NO_CACHE ./ci"
 docker build -t $TAG \
   --build-arg DIR=$DIR \
   --build-arg TYPE=$BUILD_TYPE \
@@ -115,8 +117,21 @@ docker build -t $TAG \
   $NO_CACHE \
   ./ci
 
+echo "docker build -t $TAG_HAT_TESTER --build-arg TYPE=$BUILD_TYPE --build-arg COPY_TYPE=$TYPE --build-arg TARGET=$TARGET $NO_CACHE ./ci -f ./ci/hat-tester-Dockerfile"
+docker build -t $TAG_HAT_TESTER \
+  --build-arg TYPE=$BUILD_TYPE \
+  --build-arg COPY_TYPE=$TYPE \
+  --build-arg TARGET=$TARGET \
+  $NO_CACHE \
+  ./ci -f ./ci/hat-tester-Dockerfile
+
 rm -fr $CIDIR
 
 echo "Pushing image $TAG"
 
 docker push $TAG
+
+echo "Pushing image $TAG_HAT_TESTER"
+
+docker push $TAG_HAT_TESTER
+
