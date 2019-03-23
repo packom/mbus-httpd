@@ -1,6 +1,6 @@
 [package]
 name = "mbus-httpd"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Piers Finlayson <piers@packom.net>"]
 edition = "2018"
 license = "GPL-3.0-or-later"
@@ -10,7 +10,7 @@ homepage = "https://www.packom.net"
 description = "An HTTP microservice exposing M-Bus Functionality"
 
 [dependencies]
-httpd-util = "0.1.0"
+httpd-util = "0.1.1"
 sysfs_gpio = "0.5.3"
 openapi_client = { version = "0.1.0", path = "openapi_client" }
 chrono = { version = "0.4", features = ["serde"] }
