@@ -1,13 +1,20 @@
 [package]
 name = "mbus-httpd"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Piers Finlayson <piers@packom.net>"]
 edition = "2018"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/packom/mbus-httpd"
 documentation = "https://github.com/packom/mbus-httpd"
-homepage = "https://www.packom.net"
+homepage = "https://github.com/packom/mbus-httpd"
 description = "An HTTP microservice exposing M-Bus Functionality"
+readme = "README.md"
+keywords = ["mbus","m-bus","openapi","meter","http"]
+categories = ["api-bindings","hardware-support","network-programming","embedded","web-programming"]
+
+[badges]
+maintenance = { status = "actively-developed" }
+travis-ci = { repository = "packom/mbus-httpd", branch = "master" }
 
 [dependencies]
 httpd-util = "0.1.1"
