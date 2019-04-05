@@ -7,3 +7,9 @@ matrix:
   allow_failures:
     - rust: nightly
   fast_finish: true
+notifications:
+  email:
+    recipients:
+      - piers@packom.net
+    on_success: change
+    on_failure: always
