@@ -47,6 +47,3 @@ uuid = {version = "0.5", features = ["serde", "v4"]}
 # ToDo: this should be updated to point at the official crate once
 # https://github.com/RReverser/serde-xml-rs/pull/45 is accepted upstream
 clap = "2.25"
-
-[workspace]
-members = [ "openapi_client" ]
