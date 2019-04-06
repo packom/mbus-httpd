@@ -19,7 +19,7 @@
 
 #[allow(unused_extern_crates)]
 extern crate futures;
-extern crate openapi_client;
+extern crate mbus_api;
 #[allow(unused_extern_crates)]
 #[macro_use]
 extern crate swagger;
@@ -36,11 +36,11 @@ use swagger::{AuthData, ContextBuilder, EmptyContext, Push, XSpanIdString};
 use clap::{App, Arg};
 #[allow(unused_imports)]
 use futures::{future, stream, Future, Stream};
-use openapi_client::models::{Address, Baudrate, Device, Hat};
-use openapi_client::Api;
-use openapi_client::Client;
+use mbus_api::models::{Address, Baudrate, Device, Hat};
+use mbus_api::Api;
+use mbus_api::Client;
 #[allow(unused_imports)]
-use openapi_client::{
+use mbus_api::{
     ApiError, ApiNoContext, ApiResponse, ContextWrapperExt, GetResponse, HatOffResponse,
     HatOnResponse, HatResponse, ScanResponse,
 };
@@ -212,11 +212,11 @@ fn main() {
     );
     let mut client = if matches.is_present("https") {
         // Using Simple HTTPS
-        openapi_client::Client::try_new_https(core.handle(), &base_url, "examples/ca.pem")
+        mbus_api::Client::try_new_https(core.handle(), &base_url, "examples/ca.pem")
             .expect("Failed to create HTTPS client")
     } else {
         // Using HTTP
-        openapi_client::Client::try_new_http(core.handle(), &base_url)
+        mbus_api::Client::try_new_http(core.handle(), &base_url)
             .expect("Failed to create HTTP client")
     };
 
