@@ -1,9 +1,9 @@
-//! Main library entry point for openapi_client implementation.
+//! Main library entry point for mbus_api implementation.
 
 // Imports required by server library.
 extern crate chrono;
 extern crate futures;
-extern crate openapi_client;
+extern crate mbus_api;
 extern crate swagger;
 #[macro_use]
 extern crate error_chain;
@@ -27,7 +27,7 @@ use hyper;
 use std::clone::Clone;
 use std::io;
 use std::marker::PhantomData;
-//use openapi_client;
+//use mbus_api;
 use swagger::{Has, XSpanIdString};
 //use swagger::auth::Authorization;
 
@@ -50,10 +50,10 @@ where
     type Request = (hyper::Request, C);
     type Response = hyper::Response;
     type Error = hyper::Error;
-    type Instance = openapi_client::server::Service<server::Server<C>, C>;
+    type Instance = mbus_api::server::Service<server::Server<C>, C>;
 
     /// Instantiate a new server.
     fn new_service(&self) -> io::Result<Self::Instance> {
-        Ok(openapi_client::server::Service::new(server::Server::new()))
+        Ok(mbus_api::server::Service::new(server::Server::new()))
     }
 }

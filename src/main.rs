@@ -16,7 +16,7 @@
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-//! Main binary entry point for openapi_client implementation.
+//! Main binary entry point for mbus_api implementation.
 
 #![allow(missing_docs)]
 
@@ -25,7 +25,7 @@ extern crate httpd_util;
 extern crate hyper;
 extern crate mbus_httpd;
 extern crate native_tls;
-extern crate openapi_client;
+extern crate mbus_api;
 extern crate swagger;
 extern crate tokio_proto;
 extern crate tokio_tls;
@@ -54,7 +54,7 @@ fn main() {
         mbus_httpd::get_env(),
     );
 
-    let service_fn = openapi_client::server::context::NewAddContext::<_, EmptyContext>::new(
+    let service_fn = mbus_api::server::context::NewAddContext::<_, EmptyContext>::new(
         AllowAllAuthenticator::new(mbus_httpd::NewService::new(), "cosmo"),
     );
 

@@ -16,8 +16,8 @@
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-use openapi_client::models;
-use openapi_client::{
+use mbus_api::models;
+use mbus_api::{
     ApiResponse, GetResponse, HatOffResponse, HatOnResponse, HatResponse, ScanResponse,
 };
 use std::env;
