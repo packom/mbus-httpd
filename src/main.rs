@@ -23,7 +23,7 @@
 // Imports required by this file.
 extern crate httpd_util;
 extern crate hyper;
-extern crate mbus_httpd;
+extern crate mbus;
 extern crate native_tls;
 extern crate mbus_api;
 extern crate swagger;
@@ -51,11 +51,11 @@ fn main() {
             "[LIBMBUS_SCAN] - libmbus scan binary",
             "[LD_LIBRARY_PATH] - Path containing libmbus.so, used by libmbus binaries",
         ],
-        mbus_httpd::get_env(),
+        mbus::get_env(),
     );
 
     let service_fn = mbus_api::server::context::NewAddContext::<_, EmptyContext>::new(
-        AllowAllAuthenticator::new(mbus_httpd::NewService::new(), "cosmo"),
+        AllowAllAuthenticator::new(mbus::NewService::new(), "cosmo"),
     );
 
     let addr = get_server_addr();

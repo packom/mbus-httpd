@@ -16,7 +16,7 @@
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-//! Server implementation of openapi_client.
+//! Server implementation of mbus_api.
 
 #![allow(unused_imports)]
 
@@ -30,8 +30,8 @@ use swagger::{Has, XSpanIdString};
 
 use crate::http;
 
-use openapi_client::models;
-use openapi_client::{
+use mbus_api::models;
+use mbus_api::{
     Api, ApiError, ApiResponse, GetResponse, HatOffResponse, HatOnResponse, HatResponse,
     ScanResponse,
 };
