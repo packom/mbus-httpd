@@ -90,13 +90,13 @@ curl -v -X POST http://localhost:8080/mbus/hat/on
 To scan the M-Bus connected to device /dev/ttyAMA0 at 2400 baud:
 
 ```
-curl -v X POST http://localhost:8080/mbus/scan/ttyAMA0/2400
+curl -v -X POST http://localhost:8080/mbus/scan/ttyAMA0/2400
 ```
 
 To get info from a device address 48 (0x30):
 
 ```
-curl -v X POST http://localhost:8080/mbus/get/ttyAMA0/2400/48
+curl -v -X POST http://localhost:8080/mbus/get/ttyAMA0/2400/48
 ```
 
 ## Building
