@@ -1,6 +1,6 @@
 [package]
 name = "mbus"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Piers Finlayson <piers@packom.net>"]
 edition = "2018"
 license = "GPL-3.0-or-later"
@@ -17,7 +17,7 @@ maintenance = { status = "actively-developed" }
 travis-ci = { repository = "packom/mbus-httpd", branch = "master" }
 
 [dependencies]
-httpd-util = "0.1.1"
+httpd-util = "0.1.4"
 sysfs_gpio = "0.5.3"
 mbus-api = "0.1.0"
 chrono = { version = "0.4", features = ["serde"] }
