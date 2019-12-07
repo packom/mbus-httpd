@@ -26,7 +26,7 @@ hyper = {version = "0.11"}
 hyper-tls = {version = "0.1.2"}
 swagger = "2"
 error-chain = "0.12"
-lazy_static = "0.2"
+lazy_static = "1"
 log = "0.3.0"
 mime = "0.3.3"
 multipart = {version = "0.13.3"}
