@@ -17,33 +17,29 @@ maintenance = { status = "actively-developed" }
 travis-ci = { repository = "packom/mbus-httpd", branch = "master" }
 
 [dependencies]
-httpd-util = "0.1.4"
-sysfs_gpio = "0.5.3"
-mbus-api = "0.1.0"
+httpd-util = "0.1"
+sysfs_gpio = "0.5"
+mbus-api = "0.2"
 chrono = { version = "0.4", features = ["serde"] }
-futures = "0.1"
-hyper = {version = "0.11"}
-hyper-tls = {version = "0.1.2"}
-swagger = "2"
-error-chain = "0.12"
-lazy_static = "1"
-log = "0.3.0"
-mime = "0.3.3"
-multipart = {version = "0.13.3"}
-native-tls = {version = "0.1.4"}
-openssl = {version = "0.9.14"}
-percent-encoding = {version = "1.0.0"}
-regex = {version = "0.2"}
+futures = "0.1" # 0.3 incompatible
+hyper = {version = "0.12"} # 0.13 incompatible
+swagger = "4.0"
+lazy_static = "1.4"
+log = "0.4"
+mime = "0.3"
+multipart = {version = "0.16"}
+native-tls = {version = "0.2"}
+percent-encoding = {version = "2"}
+regex = {version = "1"}
 serde = "1.0"
 serde_derive = "1.0"
-serde_ignored = {version = "0.0.4"}
-serde_json = {version = "1.0"}
-serde_urlencoded = {version = "0.5.1"}
-tokio-core = {version = "0.1.6"}
-tokio-proto = {version = "0.1.1"}
-tokio-tls = {version = "0.1.3", features = ["tokio-proto"]}
-url = {version = "1.5"}
-uuid = {version = "0.5", features = ["serde", "v4"]}
-# ToDo: this should be updated to point at the official crate once
-# https://github.com/RReverser/serde-xml-rs/pull/45 is accepted upstream
-clap = "2.25"
+serde_ignored = {version = "0.1"}
+serde_json = {version = "1.0", optional = true}
+serde_urlencoded = {version = "0.6"}
+tokio = "0.1.17" # 0.2 incompatible
+tokio-openssl = "0.3" # No tokio_openssl::SslAcceptorExt in 0.4
+url = {version = "2"}
+uuid = {version = "0.8", features = ["serde", "v4"]}
+error-chain = "0.12"
+nix = "0.11.0" # i2cdev2 incompatible with nix 0.17
+openssl = {version = "0.10"}
