@@ -40,7 +40,7 @@ pipeline {
                     sh '''
                         cd ~/builds/mbus-httpd && \
                         CURV=$(cat /tmp/version) && \
-                        echo `cargo search mbus-httpd | awk '/^mbus-httpd / {print $3;}' | sed 's/"//g'` > /tmp/old_version && \
+                        echo `cargo search mbus | awk '/^mbus / {print $3;}' | sed 's/"//g'` > /tmp/old_version && \
                         echo "Old version is:" && \
                         cat /tmp/old_version && \
                         OLDV=$(cat /tmp/old_version) && \
