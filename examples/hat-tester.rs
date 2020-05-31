@@ -17,23 +17,9 @@
 //
 #![allow(missing_docs, unused_variables, trivial_casts)]
 
-#[allow(unused_extern_crates)]
-extern crate futures;
-extern crate mbus_api;
-#[allow(unused_extern_crates)]
-#[macro_use]
-extern crate swagger;
-#[allow(unused_extern_crates)]
-extern crate uuid;
-#[macro_use]
-extern crate clap;
-extern crate regex;
-extern crate tokio_core;
-extern crate httpd_util;
-
 use swagger::{AuthData, ContextBuilder, EmptyContext, Push, XSpanIdString};
 
-use clap::{App, Arg};
+use clap::{App, Arg, crate_version};
 #[allow(unused_imports)]
 use futures::{future, stream, Future, Stream};
 use mbus_api::models::{Address, Baudrate, Device, Hat};
@@ -41,7 +27,7 @@ use mbus_api::Api;
 use mbus_api::Client;
 #[allow(unused_imports)]
 use mbus_api::{
-    ApiError, ApiNoContext, ApiResponse, ContextWrapperExt, GetResponse, HatOffResponse,
+    ApiError, ApiNoContext, MbusApiResponse, ContextWrapperExt, GetResponse, HatOffResponse,
     HatOnResponse, HatResponse, ScanResponse,
 };
 use regex::Regex;
@@ -49,6 +35,7 @@ use std::thread::sleep;
 use std::time;
 use tokio_core::reactor;
 use std::process::exit;
+use swagger::{make_context, make_context_ty};
 
 const PRODUCT: &str = "M-Bus Master";
 const PRODUCT_ID: &str = "0x0001";
@@ -212,11 +199,11 @@ fn main() {
     );
     let mut client = if matches.is_present("https") {
         // Using Simple HTTPS
-        mbus_api::Client::try_new_https(core.handle(), &base_url, "examples/ca.pem")
+        mbus_api::Client::try_new_https(&base_url)
             .expect("Failed to create HTTPS client")
     } else {
         // Using HTTP
-        mbus_api::Client::try_new_http(core.handle(), &base_url)
+        mbus_api::Client::try_new_http(&base_url)
             .expect("Failed to create HTTP client")
     };
 
@@ -559,7 +546,7 @@ macro_rules! context {
             ContextBuilder,
             EmptyContext,
             None as Option<AuthData>,
-            XSpanIdString(self::uuid::Uuid::new_v4().to_string())
+            XSpanIdString(uuid::Uuid::new_v4().to_string())
         );
         context
     }};
@@ -570,7 +557,7 @@ fn get_hat(
     succeed: bool,
     match_hat: &Hat,
     core: &mut reactor::Core,
-    client: &mut Client<hyper::client::FutureResponse>,
+    client: &mut Client<hyper::client::ResponseFuture>,
 ) -> Result<(), ()> {
     if log {
         print!("Get hat ... ")
@@ -605,7 +592,7 @@ fn get(
     baudrate: Baudrate,
     address: Address,
     core: &mut reactor::Core,
-    client: &mut Client<hyper::client::FutureResponse>,
+    client: &mut Client<hyper::client::ResponseFuture>,
 ) -> Result<(), ()> {
     if log {
         print!(
@@ -649,7 +636,7 @@ fn hat_off(
     log: bool,
     succeed: bool,
     core: &mut reactor::Core,
-    client: &mut Client<hyper::client::FutureResponse>,
+    client: &mut Client<hyper::client::ResponseFuture>,
 ) -> Result<(), ()> {
     if log {
         print!("Hat off ... ")
@@ -677,7 +664,7 @@ fn hat_on(
     log: bool,
     succeed: bool,
     core: &mut reactor::Core,
-    client: &mut Client<hyper::client::FutureResponse>,
+    client: &mut Client<hyper::client::ResponseFuture>,
 ) -> Result<(), ()> {
     if log {
         print!("Hat on  ... ")
@@ -708,7 +695,7 @@ fn scan(
     baudrate: Baudrate,
     address: Address,
     core: &mut reactor::Core,
-    client: &mut Client<hyper::client::FutureResponse>,
+    client: &mut Client<hyper::client::ResponseFuture>,
 ) -> Result<(), ()> {
     if log {
         print!(
