@@ -1,6 +1,6 @@
 [package]
 name = "mbus"
-version = "0.1.4"
+version = "0.2.0"
 authors = ["Piers Finlayson <piers@packom.net>"]
 edition = "2018"
 license = "GPL-3.0-or-later"
