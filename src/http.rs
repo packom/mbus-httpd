@@ -16,9 +16,11 @@
 //  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
+#![allow(dead_code)]
+
 use mbus_api::models;
 use mbus_api::{
-    ApiResponse, GetResponse, HatOffResponse, HatOnResponse, HatResponse, ScanResponse,
+    MbusApiResponse, GetResponse, HatOffResponse, HatOnResponse, HatResponse, ScanResponse,
 };
 use std::env;
 use std::fs;
@@ -27,6 +29,9 @@ use std::process::Command;
 use std::str;
 use std::sync::Mutex;
 use sysfs_gpio::{Direction, Pin};
+
+use log::{info};
+use lazy_static::lazy_static;
 
 const LIBMBUS_PATH_VAR: &str = "LIBMBUS_PATH";
 const LIBMBUS_PATH_DEF: &str = "/usr/local/bin/";
@@ -79,13 +84,13 @@ lazy_static! {
     static ref BUS: Mutex<i32> = Mutex::new(0);
 }
 
-pub(crate) fn api() -> ApiResponse {
+pub(crate) fn api() -> MbusApiResponse {
     info!("API {}", "api");
     let rsp = match fs::read_to_string("/static/api.yaml")
         .map_err(|e| format!("Failed to read file: {}", e))
     {
-        Ok(s) => ApiResponse::OK(s),
-        Err(e) => ApiResponse::NotFound(e),
+        Ok(s) => MbusApiResponse::OK(s),
+        Err(e) => MbusApiResponse::NotFound(e),
     };
     info!("API {} -> {:?}", "get_api", rsp);
     rsp

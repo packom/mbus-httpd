@@ -56,7 +56,7 @@ curl -v -X GET http://localhost:8080/mbus/api
 Or, modify this as appropriate and stick in a browser:
 
 ```
-http://<your_host_name>:8080/mbus/api 
+http://<your_host_name>:8080/mbus/mbus_api 
 ```
 
 The [YAML API document](https://github.com/packom/mbus-httpd/blob/master/api/openapi.yaml) should be returned.
