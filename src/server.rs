@@ -110,6 +110,7 @@ use mbus_api::{
     Api,
     ApiError,
     GetResponse,
+    GetMultiResponse,
     HatResponse,
     HatOffResponse,
     HatOnResponse,
@@ -129,6 +130,17 @@ impl<C> Api<C> for Server<C> where C: Has<XSpanIdString>{
         _context: &C) -> Box<dyn Future<Item=GetResponse, Error=ApiError> + Send>
     {
         Box::new(futures::future::ok(http::get(&device, &baudrate, &address)))
+    }
+
+    fn get_multi(
+        &self,
+        device: String,
+        baudrate: models::Baudrate,
+        address: i32,
+        maxframes: i32,
+        _context: &C) -> Box<dyn Future<Item=GetMultiResponse, Error=ApiError> + Send>
+    {
+        Box::new(futures::future::ok(http::get_multi(&device, &baudrate, &address, &maxframes)))
     }
 
     fn hat(

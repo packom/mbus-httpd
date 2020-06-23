@@ -20,7 +20,7 @@
 
 use mbus_api::models;
 use mbus_api::{
-    MbusApiResponse, GetResponse, HatOffResponse, HatOnResponse, HatResponse, ScanResponse,
+    MbusApiResponse, GetResponse, GetMultiResponse, HatOffResponse, HatOnResponse, HatResponse, ScanResponse,
 };
 use std::env;
 use std::fs;
@@ -37,6 +37,8 @@ const LIBMBUS_PATH_VAR: &str = "LIBMBUS_PATH";
 const LIBMBUS_PATH_DEF: &str = "/usr/local/bin/";
 const LIBMBUS_GET_VAR: &str = "LIBMBUS_GET";
 const LIBMBUS_GET_DEF: &str = "mbus-serial-request-data";
+const LIBMBUS_GET_MULTI_VAR: &str = "LIBMBUS_GET_MULTI";
+const LIBMBUS_GET_MULTI_DEF: &str = "mbus-serial-request-data-multi-reply";
 const LIBMBUS_SCAN_VAR: &str = "LIBMBUS_SCAN";
 const LIBMBUS_SCAN_DEF: &str = "mbus-serial-scan";
 const LD_LIBRARY_PATH_VAR: &str = "LD_LIBRARY_PATH";
@@ -56,6 +58,7 @@ pub fn get_env() -> Vec<&'static str> {
     vec![
         LIBMBUS_PATH_VAR,
         LIBMBUS_GET_VAR,
+        LIBMBUS_GET_MULTI_VAR,
         LIBMBUS_SCAN_VAR,
         LD_LIBRARY_PATH_VAR,
     ]
@@ -72,6 +75,12 @@ lazy_static! {
         match env::var(LIBMBUS_GET_VAR) {
             Ok(v) => v,
             Err(_) => LIBMBUS_GET_DEF.to_string(),
+        }
+    };
+    static ref LIBMBUS_GET_MULTI: String = {
+        match env::var(LIBMBUS_GET_MULTI_VAR) {
+            Ok(v) => v,
+            Err(_) => LIBMBUS_GET_MULTI_DEF.to_string(),
         }
     };
     static ref LIBMBUS_SCAN: String = {
@@ -268,6 +277,66 @@ pub(crate) fn get(device: &String, baudrate: &models::Baudrate, address: &i32) -
         }
         // Actually executing the process failed - couldn't find the process?
         Err(e) => GetResponse::NotFound(format!("Failed to query M-Bus: Internal error {:?}", e)),
+    };
+
+    info!("API {} -> {:?}", "get", rsp);
+    rsp
+}
+
+pub(crate) fn get_multi(device: &String, baudrate: &models::Baudrate, address: &i32, maxframes: &i32) -> GetMultiResponse {
+    info!("API {} : {:?} {:?} {:?}", "get", device, baudrate, address);
+
+    // Check parameters
+    match check_address(address) {
+        Ok(_) => (),
+        Err(s) => return GetMultiResponse::BadRequest(s),
+    };
+
+    let lock = BUS.try_lock();
+    if lock.is_err() {
+        return GetMultiResponse::NotFound("Bus is currently in use".to_string());
+    }
+
+    // Construct mbus command like this:
+    // mbus-serial-request-data [-d] [-b BAUDRATE] device mbus-address
+    let cmd = LIBMBUS_PATH.to_owned() + &LIBMBUS_GET_MULTI;
+    let dev = DEV_PREFIX.to_owned() + device;
+    info!("Executing: {} -b {} -f {} {} {}", cmd, baudrate, maxframes, dev, address);
+    // XXX Todo - execute as a future
+    let rsp = match Command::new(cmd)
+        .arg("-b")
+        .arg(baudrate.to_string())
+        .arg(dev)
+        .arg(address.to_string())
+        .output()
+    {
+        Ok(o) => {
+            if o.status.success() {
+                match str::from_utf8(&o.stdout) {
+                    // Should already be XML
+                    Ok(s) => GetMultiResponse::OK(s.to_string()),
+                    // Somehow failed to convert stdout to a string!
+                    Err(e) => GetMultiResponse::NotFound(format!("Failed to query M-Bus: {:?}", e)),
+                }
+            } else {
+                // Process returned an error code
+                let code = match o.status.code() {
+                    Some(c) => c.to_string(),
+                    None => "None".to_string(),
+                };
+                // Get stderr (not stdout)
+                let stderr = match str::from_utf8(&o.stderr) {
+                    Ok(s) => s.to_string(),
+                    Err(e) => format!("Failed to parse stderr {:?}", e),
+                };
+                GetMultiResponse::NotFound(format!(
+                    "Failed to query M-Bus: Internal error, return code {}, stderr {}",
+                    code, stderr
+                ))
+            }
+        }
+        // Actually executing the process failed - couldn't find the process?
+        Err(e) => GetMultiResponse::NotFound(format!("Failed to query M-Bus: Internal error {:?}", e)),
     };
 
     info!("API {} -> {:?}", "get", rsp);
