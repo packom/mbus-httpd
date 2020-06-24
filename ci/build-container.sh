@@ -104,7 +104,7 @@ rm -fr $DIDIR
 mkdir -p $CIDIR
 
 echo "Getting API: ./api/openapi.yaml"
-cp ./api/openapi.yaml $CIDIR/api.yaml
+wget https://raw.githubusercontent.com/packom/mbus-api/master/api/openapi.yaml -O $CIDIR/api.yaml
 
 echo "docker build -t $TAG --build-arg DIR=$DIR --build-arg TYPE=$BUILD_TYPE --build-arg COPY_TYPE=$TYPE --build-arg TARGET=$TARGET $NO_CACHE ./ci"
 docker build -t $TAG \

@@ -1,16 +1,7 @@
-FROM piersfinlayson/build:0.2.6 as libmbus
+FROM piersfinlayson/build:0.3.5 as libmbus
 WORKDIR /home/build/builds
 RUN git clone https://github.com/rscada/libmbus
 WORKDIR /home/build/builds/libmbus
-# Generate the config.h.  Strictly this could generate a config.h not
-# appropriate for the architecture to be built, but in reality it's
-# architecture independent so fine.
-RUN /usr/bin/autoheader
-RUN /usr/bin/aclocal
-RUN /usr/bin/libtoolize --ltdl --copy --force
-RUN /usr/bin/automake --add-missing --copy
-RUN /usr/bin/autoconf
-RUN ./configure
 # Don't use the makefile, as doesn't handle cross compilation properly
 # and/or I haven't figured out how to do it.
 # Statically linking as I can't figure out how to dynamically link with
@@ -32,7 +23,7 @@ RUN $GCC -static output/mbus-serial-scan.o -o output/mbus-serial-scan -Loutput -
 RUN $GCC -static output/mbus-serial-request-data.o -o output/mbus-serial-request-data -Loutput -lc -lmbus
 RUN $GCC -static output/mbus-serial-request-data-multi-reply.o -o output/mbus-serial-request-data-multi-reply -Loutput -lc -lmbus
 
-FROM piersfinlayson/build:0.2.6 as mbus-httpd
+FROM piersfinlayson/build:0.3.5 as mbus-httpd
 WORKDIR /home/build/builds
 RUN git clone https://github.com/packom/mbus-httpd
 WORKDIR /home/build/builds/mbus-httpd
