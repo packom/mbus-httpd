@@ -1,4 +1,4 @@
-FROM piersfinlayson/build:0.2.6 as hat-tester
+FROM piersfinlayson/build:0.3.5 as hat-tester
 WORKDIR /home/build/builds
 RUN git clone https://github.com/packom/mbus-httpd
 WORKDIR /home/build/builds/mbus-httpd
