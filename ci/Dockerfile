@@ -38,7 +38,7 @@ COPY --from=libmbus /home/build/builds/libmbus/output/mbus-serial-request-data .
 COPY --from=libmbus /home/build/builds/libmbus/output/mbus-serial-request-data-multi-reply .
 ARG TARGET
 ARG COPY_TYPE
-COPY --from=mbus-httpd /home/build/builds/mbus-httpd/target/$TARGET/$COPY_TYPE/mbus-httpd .
+COPY --from=mbus-httpd /home/build/builds/mbus-httpd/target/$TARGET/$COPY_TYPE/mbus ./mbus-httpd
 ARG DIR
 ADD $DIR/api.yaml /static/
 ENV LIBMBUS_PATH=/
