@@ -90,7 +90,7 @@ fn main() {
             .long("address")
             .takes_value(true)
             .default_value("48")
-            .help("M-Bus slave address to communicate with 1 <= address <= 250"))
+            .help("M-Bus slave address to communicate with 1 <= address <= 255, or 16 digit secondary address"))
         .arg(Arg::with_name("get-repetitions")
             .long("get-reps")
             .takes_value(true)
@@ -144,18 +144,13 @@ fn main() {
         matches
             .value_of("address")
             .unwrap()
-            .parse::<i32>()
-            .expect("Invalid valid for baudrate"),
+            .to_string()
     );
-    if i32::from(address.clone()) < 1 || i32::from(address.clone()) > 250 {
-        println!("Address outside allowed range");
-        exit(1);
-    }
     let scan_b = matches.is_present("scan");
     let match_addr = if matches.is_present("check-scan") {
         address.clone()
     } else {
-        Address::from(0)
+        Address::from("0".to_string())
     };
     let hat_b = matches.is_present("hat");
     let reps = matches
@@ -636,11 +631,11 @@ fn get(
             "Get info from device {}, baudrate {}, address {} ... ",
             String::from(device.clone()),
             baudrate,
-            i32::from(address.clone())
+            address.as_str()
         )
     }
     let result = rt
-        .block_on(client.get(device.to_string(), baudrate, i32::from(address)))
+        .block_on(client.get(device.to_string(), baudrate, address.as_str().to_string()))
         .expect("failed to contact server");
     match result {
         GetResponse::OK(info) => {
@@ -743,11 +738,11 @@ fn scan(
         ScanResponse::OK(results) => {
             let mut match_addr = false;
             for addr in Regex::new("[0-9]{1,3}").unwrap().find_iter(&results) {
-                let addr = addr.as_str().parse::<i32>().unwrap();
+                let addr = addr.as_str();
                 if log {
                     print!("{} ", addr);
                 }
-                if addr == i32::from(address.clone()) {
+                if addr == address.as_str() {
                     match_addr = true;
                 }
                 if log {

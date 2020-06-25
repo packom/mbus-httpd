@@ -213,18 +213,34 @@ pub(crate) fn hat_on() -> HatOnResponse {
     rsp
 }
 
-fn check_address(address: &i32) -> Result<(), String> {
-    if *address < 1 || *address > 250 {
-        Err(format!(
-            "Couldn't parse path parameter {}: {}, 1 <= address <= 250",
-            "address", address
-        ))
+fn check_address(address: &String) -> Result<(), String> {
+    let len = address.len();
+    let err_s = format!("Not a valid primary or secondary address");
+    if len == 16 {
+        let chars = address.chars();
+        if chars.map(|c| c.is_ascii_hexdigit()).any(|b| b == false) {
+            Err(err_s)
+        } else {
+            Ok(())
+        }
+    } else if len >= 1 && len <= 3 {
+        let int = address.parse::<i32>();
+        match int {
+            Ok(int) => {
+                if int >= 0 && int <= 255 {
+                    Ok(())
+                } else {
+                    Err(err_s)
+                }
+            }
+            _ => Err(err_s),
+        }
     } else {
-        Ok(())
+        Err(err_s)
     }
 }
 
-pub(crate) fn get(device: &String, baudrate: &models::Baudrate, address: &i32) -> GetResponse {
+pub(crate) fn get(device: &String, baudrate: &models::Baudrate, address: &String) -> GetResponse {
     info!("API {} : {:?} {:?} {:?}", "get", device, baudrate, address);
 
     // Check parameters
@@ -248,7 +264,7 @@ pub(crate) fn get(device: &String, baudrate: &models::Baudrate, address: &i32) -
         .arg("-b")
         .arg(baudrate.to_string())
         .arg(dev)
-        .arg(address.to_string())
+        .arg(address)
         .output()
     {
         Ok(o) => {
@@ -292,7 +308,7 @@ pub(crate) fn get(device: &String, baudrate: &models::Baudrate, address: &i32) -
 pub(crate) fn get_multi(
     device: &String,
     baudrate: &models::Baudrate,
-    address: &i32,
+    address: &String,
     maxframes: &i32,
 ) -> GetMultiResponse {
     info!(
@@ -324,7 +340,7 @@ pub(crate) fn get_multi(
         .arg("-b")
         .arg(baudrate.to_string())
         .arg(dev)
-        .arg(address.to_string())
+        .arg(address)
         .output()
     {
         Ok(o) => {

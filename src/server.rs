@@ -31,11 +31,10 @@ use std::marker::PhantomData;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
-use swagger::{Has, XSpanIdString};
 use swagger::auth::MakeAllowAllAuthenticator;
 use swagger::EmptyContext;
+use swagger::{Has, XSpanIdString};
 use tokio::net::TcpListener;
-
 
 #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
@@ -53,10 +52,7 @@ pub async fn create(addr: &str, ssl: Option<SslAcceptorBuilder>) {
 
     let service = MakeAllowAllAuthenticator::new(service, "cosmo");
 
-    let mut service =
-        mbus_api::server::context::MakeAddContext::<_, EmptyContext>::new(
-            service
-        );
+    let mut service = mbus_api::server::context::MakeAddContext::<_, EmptyContext>::new(service);
 
     match ssl {
         Some(ssl) => {
@@ -71,18 +67,26 @@ pub async fn create(addr: &str, ssl: Option<SslAcceptorBuilder>) {
                     let tls_acceptor = Arc::clone(&tls_acceptor);
 
                     tokio::spawn(async move {
-                        let tls = tokio_openssl::accept(&*tls_acceptor, tcp).await.map_err(|_| ())?;
+                        let tls = tokio_openssl::accept(&*tls_acceptor, tcp)
+                            .await
+                            .map_err(|_| ())?;
 
                         let service = service.await.map_err(|_| ())?;
 
-                        Http::new().serve_connection(tls, service).await.map_err(|_| ())
+                        Http::new()
+                            .serve_connection(tls, service)
+                            .await
+                            .map_err(|_| ())
                     });
                 }
 
                 incoming = rest;
             }
-        },
-        None => hyper::server::Server::bind(&addr).serve(service).await.unwrap(),
+        }
+        None => hyper::server::Server::bind(&addr)
+            .serve(service)
+            .await
+            .unwrap(),
     }
 }
 
@@ -93,37 +97,34 @@ pub struct Server<C> {
 
 impl<C> Server<C> {
     pub fn new() -> Self {
-        Server{marker: PhantomData}
+        Server {
+            marker: PhantomData,
+        }
     }
 }
 
-
-use mbus_api::{
-    Api,
-    GetResponse,
-    GetMultiResponse,
-    HatResponse,
-    HatOffResponse,
-    HatOnResponse,
-    MbusApiResponse,
-    ScanResponse,
-};
 use mbus_api::server::MakeService;
+use mbus_api::{
+    Api, GetMultiResponse, GetResponse, HatOffResponse, HatOnResponse, HatResponse,
+    MbusApiResponse, ScanResponse,
+};
 use std::error::Error;
 use swagger::ApiError;
 
 mod http;
 
 #[async_trait]
-impl<C> Api<C> for Server<C> where C: Has<XSpanIdString> + Send + Sync
+impl<C> Api<C> for Server<C>
+where
+    C: Has<XSpanIdString> + Send + Sync,
 {
     async fn get(
         &self,
         device: String,
         baudrate: models::Baudrate,
-        address: i32,
-        _context: &C) -> Result<GetResponse, ApiError>
-    {
+        address: String,
+        _context: &C,
+    ) -> Result<GetResponse, ApiError> {
         Ok(http::get(&device, &baudrate, &address))
     }
 
@@ -131,38 +132,26 @@ impl<C> Api<C> for Server<C> where C: Has<XSpanIdString> + Send + Sync
         &self,
         device: String,
         baudrate: models::Baudrate,
-        address: i32,
+        address: String,
         maxframes: i32,
-        _context: &C) -> Result<GetMultiResponse, ApiError>
-    {
+        _context: &C,
+    ) -> Result<GetMultiResponse, ApiError> {
         Ok(http::get_multi(&device, &baudrate, &address, &maxframes))
     }
 
-    async fn hat(
-        &self,
-        _context: &C) -> Result<HatResponse, ApiError>
-    {
+    async fn hat(&self, _context: &C) -> Result<HatResponse, ApiError> {
         Ok(http::hat())
     }
 
-    async fn hat_off(
-        &self,
-        _context: &C) -> Result<HatOffResponse, ApiError>
-    {
+    async fn hat_off(&self, _context: &C) -> Result<HatOffResponse, ApiError> {
         Ok(http::hat_off())
     }
 
-    async fn hat_on(
-        &self,
-        _context: &C) -> Result<HatOnResponse, ApiError>
-    {
+    async fn hat_on(&self, _context: &C) -> Result<HatOnResponse, ApiError> {
         Ok(http::hat_on())
     }
 
-    async fn mbus_api(
-        &self,
-        _context: &C) -> Result<MbusApiResponse, ApiError>
-    {
+    async fn mbus_api(&self, _context: &C) -> Result<MbusApiResponse, ApiError> {
         Ok(http::api())
     }
 
@@ -170,9 +159,8 @@ impl<C> Api<C> for Server<C> where C: Has<XSpanIdString> + Send + Sync
         &self,
         device: String,
         baudrate: models::Baudrate,
-        _context: &C) -> Result<ScanResponse, ApiError>
-    {
+        _context: &C,
+    ) -> Result<ScanResponse, ApiError> {
         Ok(http::scan(&device, &baudrate))
     }
-
 }

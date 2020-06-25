@@ -21,10 +21,12 @@
 #![allow(missing_docs)]
 
 use httpd_util::{get_server_addr, https, init_app, ssl};
-use log::{debug};
+use log::debug;
 
-#[path = "server.rs"] mod server;
-#[path = "http.rs"] mod http;
+#[path = "http.rs"]
+mod http;
+#[path = "server.rs"]
+mod server;
 
 use http::get_env;
 
