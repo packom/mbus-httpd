@@ -1,6 +1,6 @@
 //
 //  hat-tester - A tester for mbus-httpd
-//  Copyright (C) 2019  packom.net
+//  Copyright (C) 2019-2020 packom.net
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -17,25 +17,30 @@
 //
 #![allow(missing_docs, unused_variables, trivial_casts)]
 
-use swagger::{AuthData, ContextBuilder, EmptyContext, Push, XSpanIdString};
-
-use clap::{App, Arg, crate_version};
+use clap::{crate_version, App, Arg};
 #[allow(unused_imports)]
-use futures::{future, stream, Future, Stream};
-use mbus_api::models::{Address, Baudrate, Device, Hat};
-use mbus_api::Api;
-use mbus_api::Client;
+use futures::{future, stream, Stream};
+#[allow(unused_imports)]
+use mbus_api::models::{Address, Baudrate, Device, Hat, Maxframes};
 #[allow(unused_imports)]
 use mbus_api::{
-    ApiError, ApiNoContext, MbusApiResponse, ContextWrapperExt, GetResponse, HatOffResponse,
-    HatOnResponse, HatResponse, ScanResponse,
+    models, Api, ApiNoContext, Client, ContextWrapperExt, GetMultiResponse, GetResponse,
+    HatOffResponse, HatOnResponse, HatResponse, MbusApiResponse, ScanResponse,
 };
 use regex::Regex;
+use std::process::exit;
 use std::thread::sleep;
 use std::time;
-use tokio_core::reactor;
-use std::process::exit;
-use swagger::{make_context, make_context_ty};
+use tokio::runtime::Runtime;
+
+use swagger::{AuthData, ContextBuilder, EmptyContext, Push, XSpanIdString};
+
+type ClientContext = swagger::make_context_ty!(
+    ContextBuilder,
+    EmptyContext,
+    Option<AuthData>,
+    XSpanIdString
+);
 
 const PRODUCT: &str = "M-Bus Master";
 const PRODUCT_ID: &str = "0x0001";
@@ -43,14 +48,14 @@ const VENDOR: &str = "packom.net";
 
 macro_rules! outputsf {
     ($f: ident) => {
-        if ! $f {
+        if !$f {
             println!("==> Success")
         } else {
             println!("==> Failed")
         }
-    }
+    };
 }
-            
+
 fn main() {
     httpd_util::reg_for_sigs();
 
@@ -189,7 +194,12 @@ fn main() {
     let mut errors = Errors::new(hard);
 
     // Create client
-    let mut core = reactor::Core::new().unwrap();
+    let context: ClientContext = swagger::make_context!(
+        ContextBuilder,
+        EmptyContext,
+        None as Option<AuthData>,
+        XSpanIdString::default()
+    );
     let is_https = matches.is_present("https");
     let base_url = format!(
         "{}://{}:{}",
@@ -197,15 +207,19 @@ fn main() {
         matches.value_of("host").unwrap(),
         matches.value_of("port").unwrap()
     );
-    let mut client = if matches.is_present("https") {
+    let mut client: Box<dyn ApiNoContext<ClientContext>> = if is_https {
         // Using Simple HTTPS
-        mbus_api::Client::try_new_https(&base_url)
-            .expect("Failed to create HTTPS client")
+        let client =
+            Box::new(Client::try_new_https(&base_url).expect("Failed to create HTTPS client"));
+        Box::new(client.with_context(context))
     } else {
         // Using HTTP
-        mbus_api::Client::try_new_http(&base_url)
-            .expect("Failed to create HTTP client")
+        let client =
+            Box::new(Client::try_new_http(&base_url).expect("Failed to create HTTP client"));
+        Box::new(client.with_context(context))
     };
+
+    let mut rt = tokio::runtime::Runtime::new().unwrap();
 
     // Run tests
     println!("====> Run tests {} times", reps);
@@ -216,20 +230,32 @@ fn main() {
             println!("==> Test can get hat details when hat is off and on");
             let mut failed = false;
             let sleep_time = time::Duration::from_millis(1000);
-            hat_off(verbose, true, &mut core, &mut client)
-                .or_else(|e| { failed = true; errors.off() } )
+            hat_off(verbose, true, &mut rt, &mut client)
+                .or_else(|e| {
+                    failed = true;
+                    errors.off()
+                })
                 .ok();
             sleep(sleep_time);
-            get_hat(verbose, true, &match_hat, &mut core, &mut client)
-                .or_else(|e| { failed = true; errors.hat() } )
+            get_hat(verbose, true, &match_hat, &mut rt, &mut client)
+                .or_else(|e| {
+                    failed = true;
+                    errors.hat()
+                })
                 .ok();
             sleep(sleep_time);
-            hat_on(verbose, true, &mut core, &mut client)
-                .or_else(|e| { failed = true; errors.on() } )
+            hat_on(verbose, true, &mut rt, &mut client)
+                .or_else(|e| {
+                    failed = true;
+                    errors.on()
+                })
                 .ok();
             sleep(sleep_time);
-            get_hat(verbose, true, &match_hat, &mut core, &mut client)
-                .or_else(|e| { failed = true; errors.hat() } )
+            get_hat(verbose, true, &match_hat, &mut rt, &mut client)
+                .or_else(|e| {
+                    failed = true;
+                    errors.hat()
+                })
                 .ok();
             sleep(sleep_time);
             outputsf!(failed);
@@ -238,18 +264,27 @@ fn main() {
             let mut failed = false;
             let mut sleep_time = time::Duration::from_millis(10);
             for i in 1..100 {
-                hat_off(false, true, &mut core, &mut client)
-                    .or_else(|e| { failed = true; errors.off() } )
+                hat_off(false, true, &mut rt, &mut client)
+                    .or_else(|e| {
+                        failed = true;
+                        errors.off()
+                    })
                     .ok();
                 sleep(sleep_time);
-                hat_on(false, true, &mut core, &mut client)
-                    .or_else(|e| { failed = true; errors.on() } )
+                hat_on(false, true, &mut rt, &mut client)
+                    .or_else(|e| {
+                        failed = true;
+                        errors.on()
+                    })
                     .ok();
                 sleep(sleep_time);
                 sleep_time = sleep_time + time::Duration::from_millis(2);
             }
-            hat_off(false, true, &mut core, &mut client)
-                .or_else(|e| { failed = true; errors.off() } )
+            hat_off(false, true, &mut rt, &mut client)
+                .or_else(|e| {
+                    failed = true;
+                    errors.off()
+                })
                 .ok();
             sleep(sleep_time);
             outputsf!(failed);
@@ -260,8 +295,11 @@ fn main() {
             let mut failed = false;
             let sleep_time = time::Duration::from_millis(1000);
             if hat_b {
-                hat_on(false, true, &mut core, &mut client)
-                    .or_else(|e| { failed = true; errors.on() } )
+                hat_on(false, true, &mut rt, &mut client)
+                    .or_else(|e| {
+                        failed = true;
+                        errors.on()
+                    })
                     .ok();
                 sleep(sleep_time);
             }
@@ -271,14 +309,20 @@ fn main() {
                 device.clone(),
                 baudrate.clone(),
                 match_addr.clone(),
-                &mut core,
+                &mut rt,
                 &mut client,
             )
-            .or_else(|e| { failed = true; errors.scan() } )
+            .or_else(|e| {
+                failed = true;
+                errors.scan()
+            })
             .ok();
             if hat_b {
-                hat_off(false, true, &mut core, &mut client)
-                    .or_else(|e| { failed = true; errors.off() } )
+                hat_off(false, true, &mut rt, &mut client)
+                    .or_else(|e| {
+                        failed = true;
+                        errors.off()
+                    })
                     .ok();
                 sleep(sleep_time);
             }
@@ -288,14 +332,14 @@ fn main() {
         println!("===> Run test {} times", get_reps);
         let sleep_time = time::Duration::from_millis(1000);
         if hat_b {
-            hat_on(false, true, &mut core, &mut client)
-                .or_else(|e| errors.on() )
+            hat_on(false, true, &mut rt, &mut client)
+                .or_else(|e| errors.on())
                 .ok();
             sleep(sleep_time);
         }
         let sleep_time = time::Duration::from_millis(10);
         for rep in 0..get_reps {
-            println!("==> Get data from slave repetition {}", rep+1);
+            println!("==> Get data from slave repetition {}", rep + 1);
             let mut failed = false;
             get(
                 verbose,
@@ -303,18 +347,21 @@ fn main() {
                 device.clone(),
                 baudrate.clone(),
                 address.clone(),
-                &mut core,
+                &mut rt,
                 &mut client,
             )
-            .or_else(|e| { failed = true; errors.get() } )
+            .or_else(|e| {
+                failed = true;
+                errors.get()
+            })
             .ok();
             outputsf!(failed);
             sleep(sleep_time);
         }
         let sleep_time = time::Duration::from_millis(1000);
         if hat_b {
-            hat_off(false, true, &mut core, &mut client)
-                .or_else(|e| errors.off() )
+            hat_off(false, true, &mut rt, &mut client)
+                .or_else(|e| errors.off())
                 .ok();
             sleep(sleep_time);
         }
@@ -323,8 +370,11 @@ fn main() {
             println!("==> Get data from slave with bus off");
             let mut failed = false;
             let sleep_time = time::Duration::from_millis(1000);
-            hat_off(false, true, &mut core, &mut client)
-                .or_else(|e| { failed = true; errors.off() } )
+            hat_off(false, true, &mut rt, &mut client)
+                .or_else(|e| {
+                    failed = true;
+                    errors.off()
+                })
                 .ok();
             sleep(sleep_time);
             get(
@@ -333,10 +383,13 @@ fn main() {
                 device.clone(),
                 baudrate.clone(),
                 address.clone(),
-                &mut core,
+                &mut rt,
                 &mut client,
             )
-            .or_else(|e| { failed = true; errors.get() } )
+            .or_else(|e| {
+                failed = true;
+                errors.get()
+            })
             .ok();
             outputsf!(failed);
         }
@@ -344,8 +397,11 @@ fn main() {
         if hat_b {
             println!("==> Leaving hat off");
             let mut failed = false;
-            hat_off(false, true, &mut core, &mut client)
-                .or_else(|e| { failed = true; errors.off() } )
+            hat_off(false, true, &mut rt, &mut client)
+                .or_else(|e| {
+                    failed = true;
+                    errors.off()
+                })
                 .ok();
             outputsf!(failed);
         }
@@ -535,36 +591,17 @@ macro_rules! fail {
     };
 }
 
-macro_rules! context {
-    () => {{
-        let context: make_context_ty!(
-            ContextBuilder,
-            EmptyContext,
-            Option<AuthData>,
-            XSpanIdString
-        ) = make_context!(
-            ContextBuilder,
-            EmptyContext,
-            None as Option<AuthData>,
-            XSpanIdString(uuid::Uuid::new_v4().to_string())
-        );
-        context
-    }};
-}
-
 fn get_hat(
     log: bool,
     succeed: bool,
     match_hat: &Hat,
-    core: &mut reactor::Core,
-    client: &mut Client<hyper::client::ResponseFuture>,
+    rt: &mut Runtime,
+    client: &mut Box<dyn ApiNoContext<ClientContext>>,
 ) -> Result<(), ()> {
     if log {
         print!("Get hat ... ")
     };
-    let result = core
-        .run(client.hat(&context!()))
-        .expect("failed to contact server");
+    let result = rt.block_on(client.hat()).expect("failed to contact server");
     match result {
         HatResponse::OK(hat) => {
             if log {
@@ -591,8 +628,8 @@ fn get(
     device: Device,
     baudrate: Baudrate,
     address: Address,
-    core: &mut reactor::Core,
-    client: &mut Client<hyper::client::ResponseFuture>,
+    rt: &mut Runtime,
+    client: &mut Box<dyn ApiNoContext<ClientContext>>,
 ) -> Result<(), ()> {
     if log {
         print!(
@@ -602,13 +639,8 @@ fn get(
             i32::from(address.clone())
         )
     }
-    let result = core
-        .run(client.get(
-            device.to_string(),
-            baudrate,
-            i32::from(address),
-            &context!(),
-        ))
+    let result = rt
+        .block_on(client.get(device.to_string(), baudrate, i32::from(address)))
         .expect("failed to contact server");
     match result {
         GetResponse::OK(info) => {
@@ -635,14 +667,14 @@ fn get(
 fn hat_off(
     log: bool,
     succeed: bool,
-    core: &mut reactor::Core,
-    client: &mut Client<hyper::client::ResponseFuture>,
+    rt: &mut Runtime,
+    client: &mut Box<dyn ApiNoContext<ClientContext>>,
 ) -> Result<(), ()> {
     if log {
         print!("Hat off ... ")
     };
-    let result = core
-        .run(client.hat_off(&context!()))
+    let result = rt
+        .block_on(client.hat_off())
         .expect("failed to contact server");
     match result {
         HatOffResponse::OK => {
@@ -663,14 +695,14 @@ fn hat_off(
 fn hat_on(
     log: bool,
     succeed: bool,
-    core: &mut reactor::Core,
-    client: &mut Client<hyper::client::ResponseFuture>,
+    rt: &mut Runtime,
+    client: &mut Box<dyn ApiNoContext<ClientContext>>,
 ) -> Result<(), ()> {
     if log {
         print!("Hat on  ... ")
     };
-    let result = core
-        .run(client.hat_on(&context!()))
+    let result = rt
+        .block_on(client.hat_on())
         .expect("failed to contact server");
     match result {
         HatOnResponse::OK => {
@@ -694,8 +726,8 @@ fn scan(
     device: Device,
     baudrate: Baudrate,
     address: Address,
-    core: &mut reactor::Core,
-    client: &mut Client<hyper::client::ResponseFuture>,
+    rt: &mut Runtime,
+    client: &mut Box<dyn ApiNoContext<ClientContext>>,
 ) -> Result<(), ()> {
     if log {
         print!(
@@ -704,8 +736,8 @@ fn scan(
             baudrate
         );
     }
-    let result = core
-        .run(client.scan(device.to_string(), baudrate, &context!()))
+    let result = rt
+        .block_on(client.scan(device.to_string(), baudrate))
         .expect("failed to contact server");
     match result {
         ScanResponse::OK(results) => {

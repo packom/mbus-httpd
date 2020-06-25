@@ -1,6 +1,6 @@
 //
 //  mbus-httpd - An HTTP microservice exposing M-Bus Functionality
-//  Copyright (C) 2019  packom.net
+//  Copyright (C) 2019-2020 packom.net
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,8 @@
 
 use mbus_api::models;
 use mbus_api::{
-    MbusApiResponse, GetResponse, GetMultiResponse, HatOffResponse, HatOnResponse, HatResponse, ScanResponse,
+    GetMultiResponse, GetResponse, HatOffResponse, HatOnResponse, HatResponse, MbusApiResponse,
+    ScanResponse,
 };
 use std::env;
 use std::fs;
@@ -30,8 +31,8 @@ use std::str;
 use std::sync::Mutex;
 use sysfs_gpio::{Direction, Pin};
 
-use log::{info};
 use lazy_static::lazy_static;
+use log::info;
 
 const LIBMBUS_PATH_VAR: &str = "LIBMBUS_PATH";
 const LIBMBUS_PATH_DEF: &str = "/usr/local/bin/";
@@ -259,7 +260,7 @@ pub(crate) fn get(device: &String, baudrate: &models::Baudrate, address: &i32) -
                         println!("s: {:?}", s);
                         println!("x: {:?}", x);
                         GetResponse::OK(s)
-                    },
+                    }
                     // Somehow failed to convert stdout to a string!
                     Err(e) => GetResponse::NotFound(format!("Failed to query M-Bus: {:?}", e)),
                 }
@@ -288,8 +289,16 @@ pub(crate) fn get(device: &String, baudrate: &models::Baudrate, address: &i32) -
     rsp
 }
 
-pub(crate) fn get_multi(device: &String, baudrate: &models::Baudrate, address: &i32, maxframes: &i32) -> GetMultiResponse {
-    info!("API {} : {:?} {:?} {:?} {:?}", "get", device, baudrate, address, maxframes);
+pub(crate) fn get_multi(
+    device: &String,
+    baudrate: &models::Baudrate,
+    address: &i32,
+    maxframes: &i32,
+) -> GetMultiResponse {
+    info!(
+        "API {} : {:?} {:?} {:?} {:?}",
+        "get", device, baudrate, address, maxframes
+    );
 
     // Check parameters
     match check_address(address) {
@@ -306,7 +315,10 @@ pub(crate) fn get_multi(device: &String, baudrate: &models::Baudrate, address: &
     // mbus-serial-request-data [-d] [-b BAUDRATE] device mbus-address
     let cmd = LIBMBUS_PATH.to_owned() + &LIBMBUS_GET_MULTI;
     let dev = DEV_PREFIX.to_owned() + device;
-    info!("Executing: {} -b {} -f {} {} {}", cmd, baudrate, maxframes, dev, address);
+    info!(
+        "Executing: {} -b {} -f {} {} {}",
+        cmd, baudrate, maxframes, dev, address
+    );
     // XXX Todo - execute as a future
     let rsp = match Command::new(cmd)
         .arg("-b")
@@ -341,7 +353,9 @@ pub(crate) fn get_multi(device: &String, baudrate: &models::Baudrate, address: &
             }
         }
         // Actually executing the process failed - couldn't find the process?
-        Err(e) => GetMultiResponse::NotFound(format!("Failed to query M-Bus: Internal error {:?}", e)),
+        Err(e) => {
+            GetMultiResponse::NotFound(format!("Failed to query M-Bus: Internal error {:?}", e))
+        }
     };
 
     info!("API {} -> {:?}", "get_multi", rsp);
