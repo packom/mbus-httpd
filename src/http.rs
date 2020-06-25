@@ -252,9 +252,14 @@ pub(crate) fn get(device: &String, baudrate: &models::Baudrate, address: &i32) -
     {
         Ok(o) => {
             if o.status.success() {
-                match str::from_utf8(&o.stdout) {
+                match String::from_utf8(o.stdout) {
                     // Should already be XML
-                    Ok(s) => GetResponse::OK(s.to_string()),
+                    Ok(s) => {
+                        let x = serde_xml_rs::to_string(&s).unwrap();
+                        println!("s: {:?}", s);
+                        println!("x: {:?}", x);
+                        GetResponse::OK(s)
+                    },
                     // Somehow failed to convert stdout to a string!
                     Err(e) => GetResponse::NotFound(format!("Failed to query M-Bus: {:?}", e)),
                 }
@@ -284,7 +289,7 @@ pub(crate) fn get(device: &String, baudrate: &models::Baudrate, address: &i32) -
 }
 
 pub(crate) fn get_multi(device: &String, baudrate: &models::Baudrate, address: &i32, maxframes: &i32) -> GetMultiResponse {
-    info!("API {} : {:?} {:?} {:?}", "get", device, baudrate, address);
+    info!("API {} : {:?} {:?} {:?} {:?}", "get", device, baudrate, address, maxframes);
 
     // Check parameters
     match check_address(address) {
@@ -339,7 +344,7 @@ pub(crate) fn get_multi(device: &String, baudrate: &models::Baudrate, address: &
         Err(e) => GetMultiResponse::NotFound(format!("Failed to query M-Bus: Internal error {:?}", e)),
     };
 
-    info!("API {} -> {:?}", "get", rsp);
+    info!("API {} -> {:?}", "get_multi", rsp);
     rsp
 }
 

@@ -1,6 +1,6 @@
 [package]
 name = "mbus"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Piers Finlayson <piers@packom.net>"]
 edition = "2018"
 license = "GPL-3.0-or-later"
@@ -17,13 +17,16 @@ maintenance = { status = "actively-developed" }
 travis-ci = { repository = "packom/mbus-httpd", branch = "master" }
 
 [dependencies]
+#serde-xml-rs = {git = "git://github.com/Metaswitch/serde-xml-rs.git" , branch = "master"}
+serde-xml-rs = "0.4.0"
 httpd-util = "0.1"
 sysfs_gpio = "0.5"
 mbus-api = "0.3"
+async-trait = "0.1.24"
 chrono = { version = "0.4", features = ["serde"] }
-futures = "0.1" # 0.3 incompatible
-hyper = {version = "0.12"} # 0.13 incompatible
-swagger = "4.0"
+futures = "0.3"
+hyper = "0.13"
+swagger = "5.0.0-alpha-1"
 lazy_static = "1.4"
 log = "0.4"
 mime = "0.3"
@@ -36,8 +39,8 @@ serde_derive = "1.0"
 serde_ignored = {version = "0.1"}
 serde_json = {version = "1.0", optional = true}
 serde_urlencoded = {version = "0.6"}
-tokio = "0.1.17" # 0.2 incompatible
-tokio-openssl = "0.3" # No tokio_openssl::SslAcceptorExt in 0.4
+tokio = { version = "0.2", features = ["rt-threaded", "macros", "stream"] }
+tokio-openssl = "0.4"
 url = {version = "2"}
 uuid = {version = "0.8", features = ["serde", "v4"]}
 error-chain = "0.12"

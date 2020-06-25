@@ -20,22 +20,17 @@
 
 #![allow(unused_imports)]
 
-mod errors {
-    error_chain::error_chain!{}
-}
-
-pub use self::errors::*;
-
-use chrono;
-use futures::{future, Future, Stream};
+use async_trait::async_trait;
+use futures::{future, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use hyper::server::conn::Http;
-use hyper::service::MakeService as _;
+use hyper::service::Service;
 use log::info;
 use openssl::ssl::SslAcceptorBuilder;
+use std::future::Future;
 use std::marker::PhantomData;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
-use swagger;
+use std::task::{Context, Poll};
 use swagger::{Has, XSpanIdString};
 use swagger::auth::MakeAllowAllAuthenticator;
 use swagger::EmptyContext;
@@ -43,54 +38,51 @@ use tokio::net::TcpListener;
 
 
 #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
-use tokio_openssl::SslAcceptorExt;
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 use mbus_api::models;
 
 #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
 /// Builds an SSL implementation for Simple HTTPS from some hard-coded file names
-pub fn create(addr: &str, ssl: Option<SslAcceptorBuilder>) -> Box<dyn Future<Item = (), Error = ()> + Send> {
+pub async fn create(addr: &str, ssl: Option<SslAcceptorBuilder>) {
     let addr = addr.parse().expect("Failed to parse bind address");
 
     let server = Server::new();
 
-    let service_fn = MakeService::new(server);
+    let service = MakeService::new(server);
 
-    let service_fn = MakeAllowAllAuthenticator::new(service_fn, "cosmo");
+    let service = MakeAllowAllAuthenticator::new(service, "cosmo");
 
-    let service_fn =
+    let mut service =
         mbus_api::server::context::MakeAddContext::<_, EmptyContext>::new(
-            service_fn
+            service
         );
 
     match ssl {
         Some(ssl) => {
-            let tls_acceptor = ssl.build();
-            let service_fn = Arc::new(Mutex::new(service_fn));
-            let tls_listener = TcpListener::bind(&addr).unwrap().incoming().for_each(move |tcp| {
-                let addr = tcp.peer_addr().expect("Unable to get remote address");
+            let tls_acceptor = Arc::new(ssl.build());
+            let mut tcp_listener = TcpListener::bind(&addr).await.unwrap();
+            let mut incoming = tcp_listener.incoming();
 
-                let service_fn = service_fn.clone();
+            while let (Some(tcp), rest) = incoming.into_future().await {
+                if let Ok(tcp) = tcp {
+                    let addr = tcp.peer_addr().expect("Unable to get remote address");
+                    let service = service.call(addr);
+                    let tls_acceptor = Arc::clone(&tls_acceptor);
 
-                hyper::rt::spawn(tls_acceptor.accept_async(tcp).map_err(|_| ()).and_then(move |tls| {
-                    let ms = {
-                        let mut service_fn = service_fn.lock().unwrap();
-                        service_fn.make_service(&addr)
-                    };
+                    tokio::spawn(async move {
+                        let tls = tokio_openssl::accept(&*tls_acceptor, tcp).await.map_err(|_| ())?;
 
-                    ms.and_then(move |service| {
-                        Http::new().serve_connection(tls, service)
-                    }).map_err(|_| ())
-                }));
+                        let service = service.await.map_err(|_| ())?;
 
-                Ok(())
-            }).map_err(|_| ());
+                        Http::new().serve_connection(tls, service).await.map_err(|_| ())
+                    });
+                }
 
-            Box::new(tls_listener)
+                incoming = rest;
+            }
         },
-        None => Box::new(hyper::server::Server::bind(&addr).serve(service_fn).map_err(|e| panic!("{:?}", e))),
+        None => hyper::server::Server::bind(&addr).serve(service).await.unwrap(),
     }
 }
 
@@ -108,7 +100,6 @@ impl<C> Server<C> {
 
 use mbus_api::{
     Api,
-    ApiError,
     GetResponse,
     GetMultiResponse,
     HatResponse,
@@ -118,66 +109,70 @@ use mbus_api::{
     ScanResponse,
 };
 use mbus_api::server::MakeService;
+use std::error::Error;
+use swagger::ApiError;
 
 mod http;
 
-impl<C> Api<C> for Server<C> where C: Has<XSpanIdString>{
-    fn get(
+#[async_trait]
+impl<C> Api<C> for Server<C> where C: Has<XSpanIdString> + Send + Sync
+{
+    async fn get(
         &self,
         device: String,
         baudrate: models::Baudrate,
         address: i32,
-        _context: &C) -> Box<dyn Future<Item=GetResponse, Error=ApiError> + Send>
+        _context: &C) -> Result<GetResponse, ApiError>
     {
-        Box::new(futures::future::ok(http::get(&device, &baudrate, &address)))
+        Ok(http::get(&device, &baudrate, &address))
     }
 
-    fn get_multi(
+    async fn get_multi(
         &self,
         device: String,
         baudrate: models::Baudrate,
         address: i32,
         maxframes: i32,
-        _context: &C) -> Box<dyn Future<Item=GetMultiResponse, Error=ApiError> + Send>
+        _context: &C) -> Result<GetMultiResponse, ApiError>
     {
-        Box::new(futures::future::ok(http::get_multi(&device, &baudrate, &address, &maxframes)))
+        Ok(http::get_multi(&device, &baudrate, &address, &maxframes))
     }
 
-    fn hat(
+    async fn hat(
         &self,
-        _context: &C) -> Box<dyn Future<Item=HatResponse, Error=ApiError> + Send>
+        _context: &C) -> Result<HatResponse, ApiError>
     {
-        Box::new(futures::future::ok(http::hat()))
+        Ok(http::hat())
     }
 
-    fn hat_off(
+    async fn hat_off(
         &self,
-        _context: &C) -> Box<dyn Future<Item=HatOffResponse, Error=ApiError> + Send>
+        _context: &C) -> Result<HatOffResponse, ApiError>
     {
-        Box::new(futures::future::ok(http::hat_off()))
+        Ok(http::hat_off())
     }
 
-    fn hat_on(
+    async fn hat_on(
         &self,
-        _context: &C) -> Box<dyn Future<Item=HatOnResponse, Error=ApiError> + Send>
+        _context: &C) -> Result<HatOnResponse, ApiError>
     {
-        Box::new(futures::future::ok(http::hat_on()))
+        Ok(http::hat_on())
     }
 
-    fn mbus_api(
+    async fn mbus_api(
         &self,
-        _context: &C) -> Box<dyn Future<Item=MbusApiResponse, Error=ApiError> + Send>
+        _context: &C) -> Result<MbusApiResponse, ApiError>
     {
-        Box::new(futures::future::ok(http::api()))
+        Ok(http::api())
     }
 
-    fn scan(
+    async fn scan(
         &self,
         device: String,
         baudrate: models::Baudrate,
-        _context: &C) -> Box<dyn Future<Item=ScanResponse, Error=ApiError> + Send>
+        _context: &C) -> Result<ScanResponse, ApiError>
     {
-        Box::new(futures::future::ok(http::scan(&device, &baudrate)))
+        Ok(http::scan(&device, &baudrate))
     }
 
 }

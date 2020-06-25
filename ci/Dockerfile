@@ -1,4 +1,4 @@
-FROM piersfinlayson/build:0.3.5 as libmbus
+FROM piersfinlayson/build-amd64:0.3.6 as libmbus
 WORKDIR /home/build/builds
 RUN git clone https://github.com/rscada/libmbus
 WORKDIR /home/build/builds/libmbus
@@ -23,7 +23,7 @@ RUN $GCC -static output/mbus-serial-scan.o -o output/mbus-serial-scan -Loutput -
 RUN $GCC -static output/mbus-serial-request-data.o -o output/mbus-serial-request-data -Loutput -lc -lmbus
 RUN $GCC -static output/mbus-serial-request-data-multi-reply.o -o output/mbus-serial-request-data-multi-reply -Loutput -lc -lmbus
 
-FROM piersfinlayson/build:0.3.5 as mbus-httpd
+FROM piersfinlayson/build-amd64:0.3.6 as mbus-httpd
 WORKDIR /home/build/builds
 RUN git clone https://github.com/packom/mbus-httpd
 WORKDIR /home/build/builds/mbus-httpd

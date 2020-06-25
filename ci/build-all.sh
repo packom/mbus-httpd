@@ -66,6 +66,8 @@ $DIR/build-container.sh $REPO armv7 $TYPE $NO_CACHE
 # Create manifests
 echo "Creating manifests..."
 
+export DOCKER_CLI_EXPERIMENTAL=enabled 
+
 VERSION="$(awk '/^version = /{print $3}' Cargo.toml | sed 's/"//g' | sed 's/\r$//')"
 if [[ ! $VERSION ]];
   then
