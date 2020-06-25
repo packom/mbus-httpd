@@ -26,11 +26,11 @@ sh get-docker.sh
 Once docker is installed (and you may need to logout and back in after installing) you can run mbus-httpd using the following (replacing ttyAMA0 with your serial device):
 
 ```
-docker run --name mbus-httpd \
+docker run --name mbus \
           -d -p 8080:8080 \
           -e RUST_LOG=INFO \
           --device /dev/ttyAMA0:/dev/ttyAMA0 \
-          packom/mbus-httpd-release
+          packom/mbus-release
 ```
 
 This will start the mbus-httpd web server listening on port 8080.
@@ -38,13 +38,13 @@ This will start the mbus-httpd web server listening on port 8080.
 If you're using an [M-Bus Master Hat](https://www.packom.net/m-bus-master-hat/) run the container like this instead:
 
 ```
-docker run --name mbus-httpd \
+docker run --name mbus \
            -d -p 8080:8080 \
            -e RUST_LOG=INFO \
            --device /dev/ttyAMA0:/dev/ttyAMA0 \
            -v /proc/device-tree/hat:/proc/device-tree/hat \
            --privileged \
-           packom/mbus-httpd-release
+           packom/mbus-release
 ```
 
 To check whether it is working, from another shell run:
@@ -215,7 +215,7 @@ cargo run --example hat-tester -- --help
 To view logs, make sure RUST_LOG is set to INFO or DEBUG (see above).  If running in a shell the logs will be output to stdout.  If running within docker you can view the logs using:
 
 ```
-docker logs -f mbus-httpd
+docker logs -f mbus
 ```
 
 ## License
