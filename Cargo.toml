@@ -21,7 +21,7 @@ travis-ci = { repository = "packom/mbus-httpd", branch = "master" }
 serde-xml-rs = "0.4.0"
 httpd-util = "0.1"
 sysfs_gpio = "0.5"
-mbus-api = "0.3"
+mbus-api = "^0.3.1"
 async-trait = "0.1.24"
 chrono = { version = "0.4", features = ["serde"] }
 futures = "0.3"
