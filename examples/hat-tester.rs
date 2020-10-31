@@ -105,6 +105,16 @@ fn main() {
             .long("uuid")
             .takes_value(true)
             .help("Test the installed Hat has the provided UUID"))
+        .arg(Arg::with_name("product")
+            .long("product")
+            .takes_value(true)
+            .default_value(PRODUCT)
+            .help("Hat Product"))
+        .arg(Arg::with_name("product-id")
+            .long("product-id")
+            .takes_value(true)
+            .default_value(PRODUCT_ID)
+            .help("Hat Product ID"))
         .arg(Arg::with_name("product-ver")
             .long("product-ver")
             .takes_value(true)
@@ -176,10 +186,12 @@ fn main() {
     } else {
         None
     };
+    let product = matches.value_of("product").unwrap();
+    let product_id = matches.value_of("product-id").unwrap();
     let product_ver = matches.value_of("product-ver").unwrap();
     let match_hat = Hat {
-        product: Some(PRODUCT.to_string()),
-        product_id: Some(PRODUCT_ID.to_string()),
+        product: Some(product.to_string()),
+        product_id: Some(product_id.to_string()),
         product_ver: Some(product_ver.to_string()),
         uuid: uuid,
         vendor: Some(VENDOR.to_string()),
