@@ -25,12 +25,12 @@ docker push packom/mbus-release-amd64:YY.MM
 Then on one machine
 
 ```
-EXPORT VERSION=YY.MM
+export VERSION=YY.MM
 docker manifest create -a packom/mbus-release:${VERSION} packom/mbus-release-amd64:${VERSION} packom/mbus-release-aarch64:${VERSION} packom/mbus-release-armhf:${VERSION}
 docker manifest annotate --arch amd64 --os linux packom/mbus-release:${VERSION} packom/mbus-release-amd64:${VERSION}
 docker manifest annotate --arch arm --variant v7 --os linux packom/mbus-release:${VERSION} packom/mbus-release-aarch64:${VERSION}
 docker manifest annotate --arch arm64 --variant v8 --os linux packom/mbus-release:${VERSION} packom/mbus-release-aarch64:${VERSION}
-docker manigest inspect packom/mbus-release:${VERSION}
+docker manifest inspect packom/mbus-release:${VERSION}
 docker manifest push --purge packom/mbus-release:${VERSION}
 ```
 
@@ -39,7 +39,7 @@ docker manifest create -a packom/mbus-release:latest packom/mbus-release-amd64:$
 docker manifest annotate --arch amd64 --os linux packom/mbus-release:latest packom/mbus-release-amd64:${VERSION}
 docker manifest annotate --arch arm --variant v7 --os linux packom/mbus-release:latest packom/mbus-release-aarch64:${VERSION}
 docker manifest annotate --arch arm64 --variant v8 --os linux packom/mbus-release:latest packom/mbus-release-aarch64:${VERSION}
-docker manigest inspect packom/mbus-release:latest
+docker manifest inspect packom/mbus-release:latest
 docker manifest push --purge packom/mbus-release:latest
 ```
 
