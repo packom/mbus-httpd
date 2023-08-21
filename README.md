@@ -14,7 +14,7 @@ If you want to use a Raspberry Pi and want an M-Bus Master Hat, see [here](https
 The easiest way to run mbus-httpd is to use a pre-built container, using docker.  An mbus-httpd docker manifest is available which supports:
 
 * x86_64
-* ARMv6 & ARMv7 (which together cover all Raspberry Pi models).
+* ARMv8 (64-bit) & ARMv7 (32-bit) which together cover all Raspberry Pi models except the zero and original Pi (for which building a container is extremely painful!).
 
 If you need docker the easiest way to get it is to run:
 
@@ -100,6 +100,18 @@ curl -v -X POST http://localhost:8080/mbus/get/ttyAMA0/2400/48
 ```
 
 ## Building
+
+### Easy way
+
+This will build a container with all the necessary stuff.
+
+```
+docker build .
+```
+
+(The Dockerfile and other pieces in ci are deprecated - they are a way to build a very minimal container with muslc - but this is painful to maintain.)
+
+### Hard way
 
 To build you'll need [Rust](https://www.rust-lang.org/tools/install) installed.  If you don't want to go to the effort of installing Rust, you can use a [build container supporting Rust](https://piers.rocks/docker/containers/raspberry/pi/rust/cross/compile/compilation/2018/12/16/rust-compilation-for-raspberry-pi.html) such as [this one](https://hub.docker.com/r/piersfinlayson/build), which works on x86_64, ARMv6 and ARMv7 (so all flavours of Raspberry Pis):
 
