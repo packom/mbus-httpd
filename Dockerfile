@@ -20,9 +20,10 @@ RUN apt-get update && \
 ENV GCC="gcc"
 ENV COMPILE="$GCC -I. -c"
 ENV AR="$GCC-ar"
+ARG LIBMBUS_REPO="https://github.com/piersfinlayson/libmbus"
 RUN mkdir /builds && \
     cd builds/ && \
-    git clone https://github.com/rscada/libmbus && \
+    git clone ${LIBMBUS_REPO} && \
     cd libmbus && \
     mkdir -p output && \
     $COMPILE mbus/mbus-protocol.c -o output/mbus-protocol.o && \
@@ -86,4 +87,3 @@ ENV LIBMBUS_PATH=/
 VOLUME ["/ssl"]
 EXPOSE 8080
 CMD ["/mbus-httpd"]
-
