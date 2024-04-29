@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM debian:bookworm
 LABEL maintainer="docker@packom.net"
 LABEL website="www.packom.net"
 
@@ -44,41 +44,55 @@ RUN mkdir /builds && \
     rm -fr /builds 
 
 # Build mbus-httpd
+
+# ARMv6 custom handling:
+# * Debian ARMv6 doesn't support hard float, but sh.rustup.sh thinks it does so installs the wrong version by default - do we download and run rustup-init directly for ARMv6
 ENV OPENSSL_INCLUDE_DIR="/usr/include/openssl"
-RUN wget -O installrust.sh https://sh.rustup.rs && \
-    sh ./installrust.sh -y  && \
+RUN arch=$(dpkg --print-architecture) && \
+    echo "Architecture: $(arch)" && \
+    export JOBS=1 && \
+    if [ $(arch) = "armv6l" ] || [ $(arch) = "armel" ] ; \
+    then \
+      echo "OPENSSL_LIB_DIR=/usr/lib/arm-linux-gnueabi/" ; \
+      export OPENSSL_LIB_DIR="/usr/lib/arm-linux-gnueabi/" ; \
+    elif [ $(arch) = "armhf" ] || [ $(arch) = "armv7l" ] ; \
+    then \
+      echo "OPENSSL_LIB_DIR=/usr/lib/arm-linux-gnueabihf/" ; \
+      export OPENSSL_LIB_DIR="/usr/lib/arm-linux-gnueabihf/" ; \
+    elif [ $(arch) = "arm64" ] || [ $(arch) = "aarch64" ] ; \
+    then \
+      echo "OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu/" ; \
+      export OPENSSL_LIB_DIR="/usr/lib/aarch64-linux-gnu/" ; \
+    elif [ $(arch) = "amd64" ] || [ $(arch) = "x86_64" ] ; \
+    then \
+      echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu/" ; \
+      export OPENSSL_LIB_DIR="/usr/lib/x86_64-linux-gnu/" ; \
+      export JOBS=8 ; \
+    else \
+      echo "unknown architecture" ; \
+      exit 1 ; \
+    fi && \
+    if [ $(arch) = "armv6l" ] || [ $(arch) = "armel" ]; \
+    then \
+        wget https://static.rust-lang.org/rustup/dist/arm-unknown-linux-gnueabi/rustup-init -O /tmp/rustup-init ; \
+        chmod u+x /tmp/rustup-init ; \
+        /tmp/rustup-init -y ; \
+        rm /tmp/rustup-init ; \
+    else \
+        wget -O /tmp/installrust.sh https://sh.rustup.rs ; \
+        sh /tmp/installrust.sh -y ; \
+        rm /tmp/installrust.sh ; \
+    fi && \ 
     mkdir /builds && \
     cd /builds/ && \
     git clone https://github.com/packom/mbus-httpd && \
     cd mbus-httpd/ && \
-    arch=$(dpkg --print-architecture) && \
-      echo "Architecture: $(arch)" && \
-      if [ $(arch) = "armhf" ] || [ $(arch) = "armv7l" ] ; \
-      then \
-        echo "OPENSSL_LIB_DIR=/usr/lib/arm-linux-gnueabihf/" ; \
-        export OPENSSL_LIB_DIR="/usr/lib/arm-linux-gnueabihf/" ; \
-        export JOBS=1 ; \
-      elif [ $(arch) = "arm64" ] || [ $(arch) = "aarch64" ] ; \
-      then \
-        echo "OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu/" ; \
-        export OPENSSL_LIB_DIR="/usr/lib/aarch64-linux-gnu/" ; \
-        export JOBS=1 ; \
-      elif [ $(arch) = "amd64" ] || [ $(arch) = "x86_64" ] ; \
-      then \
-        echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu/" ; \
-        export OPENSSL_LIB_DIR="/usr/lib/x86_64-linux-gnu/" ; \
-        export JOBS=8 ; \
-      else \
-        echo "unknown architecture" ; \
-        export OPENSSL_LIB_DIR="/usr/lib/unknown/" ; \
-        export JOBS=1 ; \
-      fi && \
     /root/.cargo/bin/cargo build --jobs $JOBS --release && \
     cp /builds/mbus-httpd/target/release/mbus /mbus-httpd && \
     cd / && \
     rm -fr /builds && \
-    /root/.cargo/bin/rustup self uninstall -y && \
-    rm /installrust.sh
+    /root/.cargo/bin/rustup self uninstall -y 
+
 RUN mkdir /static/ && \
     wget https://raw.githubusercontent.com/packom/mbus-api/master/api/openapi.yaml -O /static/api.yaml
 
