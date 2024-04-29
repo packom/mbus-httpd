@@ -1,45 +1,36 @@
-On a 64-bit pi:
+Set up buildx.
+
+First login:
 
 ```
-docker build . -t packom/mbus-release-aarch64:YY.MM
 docker login -u packom
-docker push packom/mbus-release-aarch64:YY.MM
 ```
 
-On a 32-bit pi:
+Then:
 
 ```
-docker build . -t packom/mbus-release-armhf:YY.MM
-docker login -u packom
-docker push packom/mbus-release-armhf:YY.MM
+docker buildx bake
 ```
 
-On an x86-64bit machine:
+If you get an error about failing to merge manifests, build each image separately, e.g.:
 
 ```
-docker build . -t packom/mbus-release-armhf:YY.MM
-docker login -u packom
-docker push packom/mbus-release-amd64:YY.MM
+docker buildx build --platform linux/arm64 -t packom/mbus-httpd-arm64:29.04.24 .
+docker buildx build --platform linux/arm/v7 -t packom/mbus-httpd-armv7:29.04.24 .
+docker buildx build --platform linux/amd64 -t packom/mbus-httpd-amd64:29.04.24 .
 ```
 
-Then on one machine
+Now build a manifest:
 
 ```
-export VERSION=YY.MM
-docker manifest create -a packom/mbus-release:${VERSION} packom/mbus-release-amd64:${VERSION} packom/mbus-release-aarch64:${VERSION} packom/mbus-release-armhf:${VERSION}
-docker manifest annotate --arch amd64 --os linux packom/mbus-release:${VERSION} packom/mbus-release-amd64:${VERSION}
-docker manifest annotate --arch arm --variant v7 --os linux packom/mbus-release:${VERSION} packom/mbus-release-aarch64:${VERSION}
-docker manifest annotate --arch arm64 --variant v8 --os linux packom/mbus-release:${VERSION} packom/mbus-release-aarch64:${VERSION}
-docker manifest inspect packom/mbus-release:${VERSION}
-docker manifest push --purge packom/mbus-release:${VERSION}
+docker manifest create packom/mbus-httpd:29.04.24 \
+    packom/mbus-httpd-arm64:29.04.24 \
+    packom/mbus-httpd-armv7:29.04.24 \
+    packom/mbus-httpd-amd64:29.04.24
 ```
 
-```
-docker manifest create -a packom/mbus-release:latest packom/mbus-release-amd64:${VERSION} packom/mbus-release-aarch64:${VERSION} packom/mbus-release-armhf:${VERSION}
-docker manifest annotate --arch amd64 --os linux packom/mbus-release:latest packom/mbus-release-amd64:${VERSION}
-docker manifest annotate --arch arm --variant v7 --os linux packom/mbus-release:latest packom/mbus-release-aarch64:${VERSION}
-docker manifest annotate --arch arm64 --variant v8 --os linux packom/mbus-release:latest packom/mbus-release-aarch64:${VERSION}
-docker manifest inspect packom/mbus-release:latest
-docker manifest push --purge packom/mbus-release:latest
-```
+Now push it:
 
+```
+docker manifest push packom/mbus-httpd:29.04.24
+```
