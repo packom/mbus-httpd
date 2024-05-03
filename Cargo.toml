@@ -45,7 +45,7 @@ tokio-openssl = "0.4"
 url = {version = "2"}
 uuid = {version = "0.8", features = ["serde", "v4"]}
 error-chain = "0.12"
-nix = "0.11.0" # i2cdev2 incompatible with nix 0.17
+nix = "0.12.0" # i2cdev2 incompatible with nix 0.17
 openssl = {version = "0.10"}
 clap = "2.33"
 tokio-core = "0.1.17"
