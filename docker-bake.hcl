@@ -1,6 +1,9 @@
 #
 # docker buildx bake
 #
+variable "REGISTRY" {
+    default = "registry:80"
+}
 variable "TAG" {
     # description = "Image tag (version), e.g. latest"
     default = "latest"
@@ -19,13 +22,13 @@ group "default" {
 target "mbus-httpd" {
     dockerfile = "Dockerfile"
     tags = [
-        "packom/mbus-httpd:${TAG}"
+        "${REGISTRY}/mbus-httpd:${TAG}"
     ]
     platforms = [
         "linux/amd64",
         "linux/arm64/v8",
         "linux/arm/v7",
-        #"linux/arm/v6", No Ubuntu version
+        "linux/arm/v6",
     ]
     output = ["${OUTPUT}"]
 }

@@ -1,0 +1,22 @@
+debug = true
+
+[registry."docker.io"]
+  mirrors = ["registry-proxy:80"]
+  http = true
+  insecure = true
+
+[registry."registry-proxy:80"]
+  http = true
+  insecure = true
+
+[registry."registry:80"]
+  http = true
+
+[registry."registry:5000"]
+  http = true
+
+[registry."registry.internal.packom.net:80"]
+  http = true
+
+[registry."registry.internal.packom.net:5000"]
+  http = true
