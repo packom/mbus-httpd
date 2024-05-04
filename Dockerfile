@@ -54,8 +54,7 @@ RUN cd /build/openssl && \
         echo "Unsupported architecture" ; \
         exit 1 ; \
     fi && \
-    export CC=xx-clang && \
-    ./config $CONFIGURE_FLAGS --prefix=/usr/local/ssl --openssldir=/usr/local/ssl && \
+    ./config $CONFIGURE_FLAGS --prefix=/usr/local/ssl --openssldir=/usr/local/ssl CC=xx-clang CXX=xx-clang++ && \
     make -j 4 depend && \
     make -j 4 && \
     make install_sw

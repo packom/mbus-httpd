@@ -1,1 +1,1 @@
-docker buildx rm my-builder
+docker buildx rm mbus-httpd-builder
