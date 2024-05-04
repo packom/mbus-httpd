@@ -10,7 +10,7 @@ FROM --platform=$BUILDPLATFORM tonistiigi/xx:${XX_VERSION} AS xx
 FROM --platform=$BUILDPLATFORM rust:${RUST_VERSION}-alpine${ALPINE_VERSION} AS build
 
 # Add some useful packages
-RUN apk add bash clang git openssl-dev lld wget
+RUN apk add --no-cache bash clang git lld make perl wget
 COPY --from=xx / /
 
 # Create a build directory
@@ -27,10 +27,9 @@ RUN cd /build && \
 # Build openssl
 ARG TARGETPLATFORM
 ARG TARGETARCH
-RUN apk add --no-cache make perl
 RUN xx-apk add --no-cache gcc linux-headers musl-dev
 RUN cd /build/openssl && \
-    export CONFIGURE_FLAGS="no-shared no-zlib -fPIC no-ssl2 no-ssl3" && \
+    export CONFIGURE_FLAGS="no-shared no-zlib -fPIC no-ssl3" && \
     echo "Compiling openssl for architecture: $TARGETARCH" && \
     if [ $TARGETARCH = "amd64" ] || [ $TARGETARCH = "x86_64" ] ; \
     then \
